@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html>
+  
+<head>
+  <title>test page</title>
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+
+<script>
+$(document).ready(function () {
+    var rowIdx = 0;
+
+    // add fields
+    $('#addBtn').on('click', function () {
+    rowIdx++;
+    var contents = $(`
+<p id="p${rowIdx}">
+<label for="start">start:</label>
+<input type="date" id="start" name="start.${rowIdx}" value="" min="2018-01-01" max="2033-01-01" required />
+<label for="start">end:</label>
+<input type="date" id="end" name="end.${rowIdx}" value="" min="2018-01-01" max="2033-01-01" required />
+<button class="rmv" type="button" onclick="remover('p${rowIdx}')";>remove</button>
+</p>
+<div id="rpl"></div>`);
+    $('#rpl').replaceWith(contents);
+    });
+
+    $("#showdetails a").on('click', function(event){
+        event.preventDefault();
+        $("#details").toggle()
+    });
+
+    // use css instead
+    // $("#details").hide()
+
+});
+</script>
+
+<script>
+// remove field set
+function remover(val) {
+    // alert(val);
+    $("#"+val).remove();
+};
+</script>
+
+<style>
+    * {
+      font-family: Arial, Helvetica, sans-serif;
+    }
+    body {margin: 60px 40px; max-width: 900px}
+    h1 {font-size: 14pt}
+    h2 {font-size: 13pt}
+    label { display: inline-block; width: 50px }
+    input { width: 150px; margin-right: 20px }
+    .rmv { color: red }
+    button.submit { color: blue }
+    #details { display: none;}
+
+</style>
+</head>
+  
+<body>
+<h1>Calculator for British visits to the Schengen states</h1>
+
+<p>This small web app helps calculate if trips by British travellers conform with Regulation (EU) No 610/2013 of 26 June
+2013 which limits the total length of all trips to Schengen states to no more than 90 days in any 180 day period.</p>
+
+<h2>Background and method</h2>
+
+<p id="showdetails">Click <a href="">here</a> to show details of and background to the calculation method.</p>
+
+<div id="details">
+<p>According to the European Commission website (as at August 2023), the Regulation requires British travellers to the
+Schengen countries to visits of a maximum duration of 90 days in any 180 day period. The date of entry shall
+be considered as the first day of stay on the territory of the Member States and the date of exit shall be considered as
+the last day of stay on the territory of the Member States.</p>
+
+<p>Note that the non-EU member states Iceland, Liechtenstein, Norway and Switzerland are included in the Schengen group,
+while stays in Bulgaria, Croatia, Ireland, Romania and Cyprus are not considered as they are not presently in the
+group.</p>
+
+<p>
+For more details see the European Commission calculation manual viewable <a
+    href="https://ec.europa.eu/assets/home/visa-calculator/docs/short_stay_schengen_calculator_user_manual_en.pdf">
+    here</a>.
+</p>
+
+<p>The calculation uses a 180 day moving window over the trips provided to find the maximum length of days, inclusive of
+trip start and end dates, taken by the trips to learn if these breach the 90 day permissible length of stay. As noted
+below, trips cannot overlap in time. If you depart and arrive on the same day in two Schengen countries, consider the
+two trips a single trip.</p>
+</div>
+
+<h2>Make a calculation</h2>
+
+<p>Provide a list of past and possible future trips into the calculator to learn if you are likely to breach the 90 days
+in 180 day rule. The order of the trips isn't important, but they can't overlap in time.</p>
+
+<form action="http://127.0.0.1:8080/" method="get">
+<section>
+
+<p id="p0">
+<label for="start">start:</label>
+<input type="date" id="start" name="start.0" value="2023-01-01" min="2018-01-01" max="2033-01-01" required />
+<label for="start">end:</label>
+<input type="date" id="end" name="end.0" value="2023-01-01" min="2018-01-01" max="2033-01-01" required />
+</p>
+<div id="rpl"></div>
+
+<p>
+<button id="addBtn" type="button">add more trips</button>
+</p>
+
+<button class="submit" type="submit">Calculate</button>
+</section>
+</form>
+
+</body>
+</html>
