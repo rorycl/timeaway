@@ -7,29 +7,29 @@
 
 <script>
 $(document).ready(function () {
-    var rowIdx = 0;
-
     // add fields
+    var rowIdx = 0;
     $('#addBtn').on('click', function () {
     rowIdx++;
     var contents = $(`
 <p id="p${rowIdx}">
 <label for="start">start:</label>
-<input type="date" id="start" name="start.${rowIdx}" value="" min="2018-01-01" max="2033-01-01" required />
+<input type="date" id="start" name="Trips.${rowIdx}.Start" value="" min="2018-01-01" max="2033-01-01" required />
 <label for="start">end:</label>
-<input type="date" id="end" name="end.${rowIdx}" value="" min="2018-01-01" max="2033-01-01" required />
+<input type="date" id="end" name="Trips.${rowIdx}.End" value="" min="2018-01-01" max="2033-01-01" required />
 <button class="rmv" type="button" onclick="remover('p${rowIdx}')";>remove</button>
 </p>
 <div id="rpl"></div>`);
     $('#rpl').replaceWith(contents);
     });
 
+    // reveal details in details id
     $("#showdetails a").on('click', function(event){
         event.preventDefault();
         $("#details").toggle()
     });
 
-    // use css instead
+    // use css instead to hide on load
     // $("#details").hide()
 
 });
@@ -96,14 +96,14 @@ two trips a single trip.</p>
 <p>Provide a list of past and possible future trips into the calculator to learn if you are likely to breach the 90 days
 in 180 day rule. The order of the trips isn't important, but they can't overlap in time.</p>
 
-<form action="http://127.0.0.1:8080/" method="get">
+<form action="http://127.0.0.1:8080/" method="post">
 <section>
 
 <p id="p0">
 <label for="start">start:</label>
-<input type="date" id="start" name="start.0" value="2023-01-01" min="2018-01-01" max="2033-01-01" required />
+<input type="date" id="start" name="Trips.0.Start" value="2023-01-01" min="2018-01-01" max="2033-01-01" required />
 <label for="start">end:</label>
-<input type="date" id="end" name="end.0" value="2023-01-01" min="2018-01-01" max="2033-01-01" required />
+<input type="date" id="end" name="Trips.0.End" value="2023-01-01" min="2018-01-01" max="2033-01-01" required />
 </p>
 <div id="rpl"></div>
 
