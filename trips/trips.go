@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"sort"
+	"strings"
 	"time"
 )
 
@@ -18,9 +19,7 @@ type trip struct {
 // String returns a string representation of a trip
 func (t trip) String() string {
 	return fmt.Sprintf(
-		"start %s end %s",
-		t.Start.Format("2006-01-02"),
-		t.End.Format("2006-01-02"),
+		"start %s end %s", dayFmt(t.Start), dayFmt(t.End),
 	)
 }
 
@@ -74,7 +73,7 @@ type window struct {
 func (w window) String() string {
 	tpl := `%s : %s (%d)`
 	s := fmt.Sprintf(
-		tpl, w.start.Format("2006-01-02"), w.end.Format("2006-01-02"), w.daysAway,
+		tpl, dayFmt(w.start), dayFmt(w.end), w.daysAway,
 	)
 	for _, t := range w.tripParts {
 		s = s + fmt.Sprintf(" %s", t)
@@ -96,20 +95,22 @@ type Trips struct {
 
 // String returns a simple string representation of trips
 func (trips Trips) String() string {
-	return fmt.Sprintf(`
-	window      %d
-	maxStay     %d
-	startFrame  %s
-	endFrame    %s
-	longestStay %d
-	trips       %d
-	windows     %d
-	breach      %t
-`,
+	tpl := `
+		window      %d
+		maxStay     %d
+		startFrame  %s
+		endFrame    %s
+		longestStay %d
+		trips       %d
+		windows     %d
+		breach      %t`
+	tpl = strings.ReplaceAll(tpl, "\t", "")
+	return fmt.Sprintf(
+		tpl,
 		trips.window,
 		trips.maxStay,
-		trips.startFrame.Format("2006-01-02"),
-		trips.endFrame.Format("2006-01-02"),
+		dayFmt(trips.startFrame),
+		dayFmt(trips.endFrame),
 		trips.longestStay,
 		len(trips.trips),
 		len(trips.windows),
@@ -123,20 +124,20 @@ func NewTrips(window, maxStay int) (*Trips, error) {
 	trips := Trips{}
 	trips.breach = false
 	if window < 3 {
-		return &trips, errors.New("window cannot be less than 3")
+		return &trips, errors.New("window cannot be less than 3 days")
 	}
 	if maxStay < 2 {
-		return &trips, errors.New("maximum stay cannot be less than 2")
+		return &trips, errors.New("maximum stay cannot be less than 2 days")
 	}
 	if maxStay > window {
-		return &trips, errors.New("maximum stay cannot be > window")
+		return &trips, errors.New("maximum stay cannot be greater than the window")
 	}
 	trips.window = window
 	trips.maxStay = maxStay
 	return &trips, nil
 }
 
-// AddTrip adds a trip to Trips, checking for for validity and overlaps
+// AddTrip adds a trip to Trips, checking for validity and overlaps
 func (trips *Trips) AddTrip(start, end string) error {
 	f := func(s string) (time.Time, error) {
 		return time.Parse("2006-01-02", s)
@@ -154,14 +155,14 @@ func (trips *Trips) AddTrip(start, end string) error {
 
 	// check validity of this trip
 	if t.End.Before(t.Start) {
-		return fmt.Errorf("Start date %s after %s", t.Start, t.End)
+		return fmt.Errorf("start date %s after %s", t.Start, t.End)
 	}
 	// check no overlaps
 	for _, o := range trips.trips {
 		if ok := o.overlaps(t.Start, t.End); ok != nil {
 			return fmt.Errorf(
 				"trip %s:%s overlaps with %s:%s",
-				start, end, o.Start.Format("2006-01-02"), o.End.Format("2006-01-02"),
+				start, end, dayFmt(o.Start), dayFmt(o.End),
 			)
 		}
 	}
@@ -179,10 +180,13 @@ func (trips *Trips) AddTrip(start, end string) error {
 	return nil
 }
 
-// Calculate calculates the trip stays for the applicable windows
+// Calculate calculates the trip stays for each applicable window
+// between the start and end date frames. The window calculator could be
+// moved to goroutines to speed up processing, although it seems
+// sufficiently fast already.
 func (trips *Trips) Calculate() error {
 	if len(trips.trips) == 0 {
-		return errors.New("no trips to calculate")
+		return errors.New("no trips were provided to calculate")
 	}
 
 	// set suitable frame start and end in which to calculate windows
@@ -194,7 +198,9 @@ func (trips *Trips) Calculate() error {
 
 	// generate a series of windows starting on each day between
 	// trips.startFrame and trips.endFrame and store the results in
-	// trips.windows
+	// trips.windows. This loop could be moved to a set of goroutines
+	// although peformance for very large windows is still very quick,
+	// around 0.005s for a 720 day/180 stay use case.
 	for d := trips.startFrame; !d.After(trips.endFrame); d = d.Add(durationDays(1)) {
 		w := window{}
 		w.start = d
@@ -219,9 +225,12 @@ func (trips *Trips) Calculate() error {
 	return nil
 }
 
-// LongestTrips returns the longest combined trip windows, returning at
-// most resultsNo results (the web api will probably just take the top
-// result).
+// LongestTrips returns a boolean notifying of a breach of the provided
+// window and stays parameters together with the analysis windows with
+// the longest compound stays, returning at most resultsNo results.
+// Normally only the top result is expected to be needed, but note that
+// for windows of equal daysAway values, the one dated earliest will
+// come first as windows are made in date order.
 func (trips *Trips) LongestTrips(resultsNo int) (breach bool, windows []window) {
 	breach = trips.breach
 	for _, w := range trips.windows {
@@ -241,6 +250,11 @@ func (trips *Trips) LongestTrips(resultsNo int) (breach bool, windows []window) 
 // durationDays returns a duration for the number of days specified
 func durationDays(d int) time.Duration {
 	return time.Duration(d) * time.Hour * 24
+}
+
+// dayFmt returns the 2006-01-02 representation of a date
+func dayFmt(d time.Time) string {
+	return d.Format("2006-01-02")
 }
 
 // testStub for checking window sizes to be ignored

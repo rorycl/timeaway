@@ -31,12 +31,13 @@ func TestTripAdditions(t *testing.T) {
 	}
 	for i, h := range []holidayTest{
 		holidayTest{"2023-01-01", "2023-01-01", false, "simple add"},
-		holidayTest{"2023-01-01", "2023-01-07", true, "overlap date"},
+		holidayTest{"2023-01-01", "2023-01-07", true, "overlap already registered date"},
 		holidayTest{"2023-01-02", "2023-01-04", false, "simple add again"},
-		holidayTest{"2023-01-03", "2023-01-05", true, "overlap 2"},
-		holidayTest{"2023-01-04", "2023-01-05", true, "overlap 3"},
-		holidayTest{"2022-12-31", "2023-01-01", true, "overlap 4"},
+		holidayTest{"2023-01-03", "2023-01-05", true, "overlap two days"},
+		holidayTest{"2023-01-04", "2023-01-05", true, "overlap one day"},
+		holidayTest{"2022-12-31", "2023-01-01", true, "overlap first day"},
 		holidayTest{"2022-12-31", "2022-12-30", true, "end before start"},
+		holidayTest{"2022-11-01", "2022-11-02", false, "add before first should be ok"},
 	} {
 		err = trips.AddTrip(h.start, h.end)
 		if (err != nil && !h.err) || (err == nil && h.err) {
@@ -157,12 +158,12 @@ func TestTripsLonger(t *testing.T) {
 
 	err = trips.AddTrip("2023-02-01", "2023-02-28")
 	if err != nil {
-		t.Fatalf("1. unexected error making holiday %v", err)
+		t.Fatalf("1. unexpected error making holiday %v", err)
 	}
 
 	err = trips.AddTrip("2023-04-02", "2023-05-10")
 	if err != nil {
-		t.Fatalf("2. unexected error making holiday %v", err)
+		t.Fatalf("2. unexpected error making holiday %v", err)
 	}
 
 	err = trips.AddTrip("2022-04-02", "2022-04-01")
@@ -191,4 +192,54 @@ func TestTripsLonger(t *testing.T) {
 	if breach != true {
 		t.Error("Expected breach to be true, got false")
 	}
+}
+
+// test performance over a much larger window and larger stay size
+func TestTripsLong(t *testing.T) {
+
+	window := 720
+	compoundStayMaxLength := 180
+	resultsNo := 3
+
+	trips, err := NewTrips(window, compoundStayMaxLength)
+	if err != nil {
+		t.Fatalf("could not make trips %v", err)
+	}
+
+	for i, h := range []holiday{
+		holiday{"2020-01-01", "2020-02-01"},
+		holiday{"2021-03-01", "2021-05-01"},
+		holiday{"2023-07-11", "2023-07-12"},
+		holiday{"2023-09-01", "2023-11-01"},
+		holiday{"2024-01-01", "2024-03-25"},
+		holiday{"2024-05-01", "2024-06-01"},
+		holiday{"2028-01-01", "2028-01-01"},
+	} {
+		err = trips.AddTrip(h.start, h.end)
+		if err != nil {
+			t.Fatalf("error making holiday %d %v %v", i, h, err)
+		}
+	}
+
+	err = trips.Calculate()
+	if err != nil {
+		t.Fatalf("calculation error %v", err)
+	}
+
+	fmt.Println(trips)
+
+	breach, windows := trips.LongestTrips(resultsNo)
+	fmt.Printf("breach : %t\n", breach)
+	for i, w := range windows {
+		fmt.Printf("%d : %+v\n", i, w)
+	}
+
+	if breach != true {
+		t.Error("expected breach to be true")
+	}
+
+	if trips.longestStay != 181 {
+		t.Errorf("Expected longest stay to be 181, got %d", trips.longestStay)
+	}
+
 }
