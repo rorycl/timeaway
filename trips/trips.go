@@ -62,7 +62,7 @@ func (t trip) overlaps(start, end time.Time) *trip {
 	return &partialTrip
 }
 
-// window shows the results of a calculation window
+// window stores the results of a calculation window
 type window struct {
 	start     time.Time
 	end       time.Time
@@ -86,9 +86,8 @@ func (w window) String() string {
 type Trips struct {
 	window      int       // window of days to search over
 	maxStay     int       // the maximum length of trips in window
-	resultsNo   int       // the number of results to return
-	startWindow time.Time // date at which to start calculating windows
-	endWindow   time.Time // date at which to stop calculating windows
+	startFrame  time.Time // date at which to start calculating windows
+	endFrame    time.Time // date at which to stop calculating windows
 	longestStay int       // the longest compound stay in days
 	trips       []trip
 	windows     []window
@@ -100,8 +99,8 @@ func (trips Trips) String() string {
 	return fmt.Sprintf(`
 	window      %d
 	maxStay     %d
-	startWindow %s
-	endWindow   %s
+	startFrame  %s
+	endFrame    %s
 	longestStay %d
 	trips       %d
 	windows     %d
@@ -109,8 +108,8 @@ func (trips Trips) String() string {
 `,
 		trips.window,
 		trips.maxStay,
-		trips.startWindow.Format("2006-01-02"),
-		trips.endWindow.Format("2006-01-02"),
+		trips.startFrame.Format("2006-01-02"),
+		trips.endFrame.Format("2006-01-02"),
 		trips.longestStay,
 		len(trips.trips),
 		len(trips.windows),
@@ -119,9 +118,8 @@ func (trips Trips) String() string {
 }
 
 // NewTrips makes a new Trips struct. The window and maxStay are
-// specified in days, while resultsNo sets the number of windows with
-// the highest compound trip lengths to report
-func NewTrips(window, maxStay, resultsNo int) (*Trips, error) {
+// specified in days
+func NewTrips(window, maxStay int) (*Trips, error) {
 	trips := Trips{}
 	trips.breach = false
 	if window < 3 {
@@ -135,7 +133,6 @@ func NewTrips(window, maxStay, resultsNo int) (*Trips, error) {
 	}
 	trips.window = window
 	trips.maxStay = maxStay
-	trips.resultsNo = resultsNo
 	return &trips, nil
 }
 
@@ -171,11 +168,11 @@ func (trips *Trips) AddTrip(start, end string) error {
 
 	// set window dates
 	x := trip{}
-	if trips.startWindow == x.Start || trips.startWindow.After(t.Start) {
-		trips.startWindow = t.Start
+	if trips.startFrame == x.Start || trips.startFrame.After(t.Start) {
+		trips.startFrame = t.Start
 	}
-	if trips.endWindow.Before(t.End) {
-		trips.endWindow = t.End
+	if trips.endFrame.Before(t.End) {
+		trips.endFrame = t.End
 	}
 
 	trips.trips = append(trips.trips, t)
@@ -188,17 +185,17 @@ func (trips *Trips) Calculate() error {
 		return errors.New("no trips to calculate")
 	}
 
-	// set suitable window frames
+	// set suitable frame start and end in which to calculate windows
 	windowDuration := durationDays(trips.window - 1) // remove last day
-	trips.endWindow = trips.endWindow.Add(-windowDuration)
-	if trips.endWindow.Before(trips.startWindow) {
-		trips.endWindow = trips.startWindow
+	trips.endFrame = trips.endFrame.Add(-windowDuration)
+	if trips.endFrame.Before(trips.startFrame) {
+		trips.endFrame = trips.startFrame
 	}
 
 	// generate a series of windows starting on each day between
-	// trips.startWindow and trips.endWindow and store the results in
+	// trips.startFrame and trips.endFrame and store the results in
 	// trips.windows
-	for d := trips.startWindow; !d.After(trips.endWindow); d = d.Add(durationDays(1)) {
+	for d := trips.startFrame; !d.After(trips.endFrame); d = d.Add(durationDays(1)) {
 		w := window{}
 		w.start = d
 		w.end = d.Add(windowDuration)
@@ -222,8 +219,10 @@ func (trips *Trips) Calculate() error {
 	return nil
 }
 
-// LongestTrips returns the longest combined trip windows
-func (trips *Trips) LongestTrips() (breach bool, windows []window) {
+// LongestTrips returns the longest combined trip windows, returning at
+// most resultsNo results (the web api will probably just take the top
+// result).
+func (trips *Trips) LongestTrips(resultsNo int) (breach bool, windows []window) {
 	breach = trips.breach
 	for _, w := range trips.windows {
 		if w.daysAway > 0 {
@@ -233,8 +232,8 @@ func (trips *Trips) LongestTrips() (breach bool, windows []window) {
 	sort.SliceStable(windows, func(i, j int) bool {
 		return windows[i].daysAway > windows[j].daysAway
 	})
-	if len(windows) >= trips.resultsNo {
-		windows = windows[:trips.resultsNo]
+	if len(windows) >= resultsNo {
+		windows = windows[:resultsNo]
 	}
 	return
 }

@@ -16,7 +16,7 @@ func TestTrips(t *testing.T) {
 	compoundStayMaxLength := 4
 	resultsNo := 4
 
-	trips, err := NewTrips(window, compoundStayMaxLength, resultsNo)
+	trips, err := NewTrips(window, compoundStayMaxLength)
 	if err != nil {
 		t.Fatalf("could not make trips %v", err)
 	}
@@ -48,7 +48,7 @@ func TestTrips(t *testing.T) {
 
 	fmt.Println(trips)
 
-	breach, windows := trips.LongestTrips()
+	breach, windows := trips.LongestTrips(resultsNo)
 	fmt.Printf("breach : %t\n", breach)
 	for i, w := range windows {
 		fmt.Printf("%d : %+v\n", i, w)
@@ -72,7 +72,7 @@ func TestTripsToBreach(t *testing.T) {
 	compoundStayMaxLength := 3
 	resultsNo := 4
 
-	trips, err := NewTrips(window, compoundStayMaxLength, resultsNo)
+	trips, err := NewTrips(window, compoundStayMaxLength)
 	if err != nil {
 		t.Fatalf("could not make trips %v", err)
 	}
@@ -104,7 +104,7 @@ func TestTripsToBreach(t *testing.T) {
 
 	fmt.Println(trips)
 
-	breach, windows := trips.LongestTrips()
+	breach, windows := trips.LongestTrips(resultsNo)
 	fmt.Printf("breach : %t\n", breach)
 	for i, w := range windows {
 		fmt.Printf("%d : %+v\n", i, w)
@@ -122,7 +122,7 @@ func TestTripsToBreach(t *testing.T) {
 
 func TestTripsLonger(t *testing.T) {
 
-	trips, err := NewTrips(40, 35, 5)
+	trips, err := NewTrips(40, 35)
 	if err != nil {
 		t.Fatalf("could not make trips %v", err)
 	}
@@ -149,7 +149,7 @@ func TestTripsLonger(t *testing.T) {
 
 	fmt.Println(trips)
 
-	breach, windows := trips.LongestTrips()
+	breach, windows := trips.LongestTrips(5)
 	fmt.Printf("breach : %t\n", breach)
 	for i, w := range windows {
 		fmt.Printf("%d : %+v\n", i, w)
