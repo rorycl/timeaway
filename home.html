@@ -14,9 +14,9 @@ $(document).ready(function () {
     var contents = $(`
 <p id="p${rowIdx}">
 <label for="start">start:</label>
-<input type="date" id="start" name="Trips.${rowIdx}.Start" value="" min="2018-01-01" max="2033-01-01" required />
+<input type="date" name="Holidays.${rowIdx}.Start" value="" min="2018-01-01" max="2033-01-01" required />
 <label for="start">end:</label>
-<input type="date" id="end" name="Trips.${rowIdx}.End" value="" min="2018-01-01" max="2033-01-01" required />
+<input type="date" name="Holidays.${rowIdx}.End" value="" min="2018-01-01" max="2033-01-01" required />
 <button class="rmv" type="button" onclick="remover('p${rowIdx}')";>remove</button>
 </p>
 <div id="rpl"></div>`);
@@ -32,7 +32,42 @@ $(document).ready(function () {
     // use css instead to hide on load
     // $("#details").hide()
 
+    // form capture function
+    // https://www.digitalocean.com/community/tutorials/submitting-ajax-forms-with-jquery
+    // and https://stackoverflow.com/questions/4291005/jquery-get-all-input-from-specific-form
+    $("form").submit(function (event) {
+        var o = {}
+        $("form#trip :input").each(function() {
+            var input = $(this); // This is the jquery object of the input
+            n = input.attr('name');
+            v = input.attr('value');
+            o[n] = v;
+        });
+        console.log(o);
+
+        $.ajax({
+            type: "POST",
+            url: "http://127.0.0.1:8080/",
+            data: o,
+            // dataType: "json",
+            encode: true,
+            crossDomain: true,
+            dataType: 'jsonp',
+            success: function() { alert("Success"); },
+            error: function() { alert('Failed!'); },
+            headers: {
+                'Access-Control-Allow-Origin': '*'
+            },
+        });
+
+        // console.log(o);
+        event.preventDefault();
+
+    });
 });
+</script>
+
+<script>
 </script>
 
 <script>
@@ -96,14 +131,14 @@ two trips a single trip.</p>
 <p>Provide a list of past and possible future trips into the calculator to learn if you are likely to breach the 90 days
 in 180 day rule. The order of the trips isn't important, but they can't overlap in time.</p>
 
-<form action="http://127.0.0.1:8080/" method="post">
+<form id="trip" action="http://127.0.0.1:8080/" method="post">
 <section>
 
 <p id="p0">
 <label for="start">start:</label>
-<input type="date" id="start" name="Trips.0.Start" value="2023-01-01" min="2018-01-01" max="2033-01-01" required />
+<input type="date" name="Holidays.0.Start" value="2023-01-01" min="2018-01-01" max="2033-01-01" required />
 <label for="start">end:</label>
-<input type="date" id="end" name="Trips.0.End" value="2023-01-01" min="2018-01-01" max="2033-01-01" required />
+<input type="date" name="Holidays.0.End" value="2023-01-01" min="2018-01-01" max="2033-01-01" required />
 </p>
 <div id="rpl"></div>
 

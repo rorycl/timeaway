@@ -8,11 +8,10 @@ import (
 	"os"
 	"os/signal"
 
-	//"strings"
-
 	"github.com/braintree/manners"
 	"github.com/gorilla/schema"
 	flags "github.com/jessevdk/go-flags"
+	"github.com/rorycl/timeaway/trips"
 )
 
 var opts struct {
@@ -26,15 +25,15 @@ func init() {
 	flags.Parse(&opts)
 }
 
-// trip describes the start and end dates of a trip
-type Trip struct {
+// holiday describes the start and end dates of a trip
+type Holiday struct {
 	Start string `schema:Start`
 	End   string `schema:End`
 }
 
-// trips is a slice of trip
-type Trips struct {
-	Trips []Trip
+// holidays is a slice of holiday
+type Holidays struct {
+	Holidays []Holiday
 }
 
 func main() {
@@ -70,11 +69,53 @@ func (h *handler) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 		http.Error(res, "form error "+err.Error(), 500)
 		return
 	}
-	var trips Trips
-	err = decoder.Decode(&trips, req.PostForm)
+
+	// extract holidays from front end
+	var holidays Holidays
+	err = decoder.Decode(&holidays, req.PostForm)
 	log.Print(req.PostForm)
-	log.Print(trips, err)
-	fmt.Fprintf(res, "trips : %v\nerror: %v", trips, err)
+	log.Print(holidays, err)
+	fmt.Fprintf(res, "holidays: %v\nerror: %v", holidays, err)
+
+	// trips (from module)
+	window := 180
+	compoundStayMaxLength := 90
+	resultsNo := 1
+
+	trips, err := trips.NewTrips(window, compoundStayMaxLength)
+	if err != nil {
+		log.Printf("could not make new trips %v", err)
+		http.Error(res, "new trips error "+err.Error(), 500)
+		return
+	}
+
+	for i, h := range holidays.Holidays {
+		err = trips.AddTrip(h.Start, h.End)
+		if err != nil {
+			log.Printf("error making holiday %d %v %v", i, h, err)
+			http.Error(res, "holiday add error"+err.Error(), 500)
+			return
+		}
+	}
+
+	err = trips.Calculate()
+	if err != nil {
+		if err != nil {
+			log.Printf("calculation error %v", err)
+			http.Error(res, "calculation error"+err.Error(), 500)
+			return
+		}
+	}
+
+	breach, windows := trips.LongestTrips(resultsNo)
+
+	/*
+		tpl := "breach : %t\nwindow : %s\nlength : %d\n"
+		fmt.Fprintf(res, fmt.Sprintf(tpl, breach, windows[0], trips.longestStay))
+	*/
+	tpl := "breach : %t\nwindow : %s"
+	fmt.Fprintf(res, fmt.Sprintf(tpl, breach, windows[0]))
+
 }
 
 func listenForShutdown(ch <-chan os.Signal) {
