@@ -63,19 +63,19 @@ func (t trip) overlaps(start, end time.Time) *trip {
 
 // window stores the results of a calculation window
 type window struct {
-	start     time.Time
-	end       time.Time
-	tripParts []trip // parts of any overlapping trips
-	daysAway  int    // days away for this window
+	Start     time.Time
+	End       time.Time
+	TripParts []trip // parts of any overlapping trips
+	DaysAway  int    // days away for this window
 }
 
 // String returns a printable version of a window
 func (w window) String() string {
 	tpl := `%s : %s (%d)`
 	s := fmt.Sprintf(
-		tpl, dayFmt(w.start), dayFmt(w.end), w.daysAway,
+		tpl, dayFmt(w.Start), dayFmt(w.End), w.DaysAway,
 	)
-	for _, t := range w.tripParts {
+	for _, t := range w.TripParts {
 		s = s + fmt.Sprintf(" %s", t)
 	}
 	return s
@@ -203,22 +203,22 @@ func (trips *Trips) Calculate() error {
 	// around 0.005s for a 720 day/180 stay use case.
 	for d := trips.startFrame; !d.After(trips.endFrame); d = d.Add(durationDays(1)) {
 		w := window{}
-		w.start = d
-		w.end = d.Add(windowDuration)
+		w.Start = d
+		w.End = d.Add(windowDuration)
 		// testStub(d, w)
 		for _, t := range trips.trips {
-			partialTrip := t.overlaps(w.start, w.end)
+			partialTrip := t.overlaps(w.Start, w.End)
 			if partialTrip == nil {
 				continue
 			}
-			w.tripParts = append(w.tripParts, *partialTrip)
-			w.daysAway += partialTrip.days()
+			w.TripParts = append(w.TripParts, *partialTrip)
+			w.DaysAway += partialTrip.days()
 		}
 		trips.windows = append(trips.windows, w)
-		if w.daysAway > trips.longestStay {
-			trips.longestStay = w.daysAway
+		if w.DaysAway > trips.longestStay {
+			trips.longestStay = w.DaysAway
 		}
-		if w.daysAway > trips.maxStay {
+		if w.DaysAway > trips.maxStay {
 			trips.breach = true
 		}
 	}
@@ -234,12 +234,12 @@ func (trips *Trips) Calculate() error {
 func (trips *Trips) LongestTrips(resultsNo int) (breach bool, windows []window) {
 	breach = trips.breach
 	for _, w := range trips.windows {
-		if w.daysAway > 0 {
+		if w.DaysAway > 0 {
 			windows = append(windows, w)
 		}
 	}
 	sort.SliceStable(windows, func(i, j int) bool {
-		return windows[i].daysAway > windows[j].daysAway
+		return windows[i].DaysAway > windows[j].DaysAway
 	})
 	if len(windows) >= resultsNo {
 		windows = windows[:resultsNo]
@@ -263,7 +263,7 @@ func testStub(d time.Time, w window) {
 	if d.Equal(testDay) {
 		fmt.Println("2023-01-11")
 		fmt.Printf("day : %s\n", d.Format("2006-01-02"))
-		fmt.Printf("window: %s - %s", w.start.Format("2006-01-02"), w.end.Format("2006-01-02"))
+		fmt.Printf("window: %s - %s", w.Start.Format("2006-01-02"), w.End.Format("2006-01-02"))
 		os.Exit(1)
 	}
 }
