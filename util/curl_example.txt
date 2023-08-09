@@ -1,0 +1,23 @@
+curl example
+
+curl -X POST \
+    -d "Holidays.0.Start=2023-12-01" \
+    -d "Holidays.0.End=2023-12-02"  \
+    -d "Holidays.1.Start=2023-01-01" \
+    -d "Holidays.1.End=2023-01-30" \
+    -d "Holidays.2.Start=2023-04-01" \
+    -d "Holidays.2.End=2023-06-15" 127.0.0.1:8080/trips
+
+output:
+
+{
+  "error": "",
+  "breach": true,
+  "startdate": "2023-01-01",
+  "enddate": "2023-06-29",
+  "daysaway": 106,
+  "partialtrips": [
+    "start 2023-01-01 end 2023-01-30",
+    "start 2023-04-01 end 2023-06-15"
+  ]
+}
