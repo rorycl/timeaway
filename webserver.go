@@ -2,27 +2,31 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
+	"text/template"
+	"time"
 
 	"github.com/braintree/manners"
+	"github.com/gorilla/handlers"
+	"github.com/gorilla/mux"
 	"github.com/gorilla/schema"
 	flags "github.com/jessevdk/go-flags"
 	"github.com/rorycl/timeaway/trips"
 )
 
-var opts struct {
-	Port       string `short:"p" long:"port" description:"port to run on"`
-	Addr       string `short:"n" long:"address" description:"network address to run on"`
-	Identifier string `short:"i" long:"identifier" description:"identification string"`
+var options struct {
+	Port string `short:"p" long:"port" description:"port to run on"`
+	Addr string `short:"a" long:"address" description:"network address to run on"`
 }
 
 func init() {
 	log.SetOutput(os.Stderr)
-	flags.Parse(&opts)
+	flags.Parse(&options)
 }
 
 // holiday describes the start and end dates of a trip
@@ -37,45 +41,160 @@ type Holidays struct {
 }
 
 func main() {
-	handler := newHander()
 
+	// endpoint routing; gorilla mux is used because "/" in http.NewServeMux
+	// is a catch-all pattern
+	r := mux.NewRouter()
+	r.HandleFunc("/home", Home)
+	r.HandleFunc("/trips", Trips)
+	r.HandleFunc("/trips-verbose", TripsVerbose)
+
+	// create a handler wrapped in a recovery handler and logging handler
+	hdl := handlers.RecoveryHandler()(
+		handlers.LoggingHandler(os.Stdout, r))
+
+	// configure server options
+	server := &http.Server{
+		Addr:         options.Addr + ":" + options.Port,
+		ReadTimeout:  1 * time.Second,
+		WriteTimeout: 3 * time.Second,
+		Handler:      hdl,
+	}
+	log.Printf("serving on %s:%s", options.Addr, options.Port)
+
+	// wrap server with manners
+	manners.ListenAndServe(options.Addr+":"+options.Port, server.Handler)
+
+	// catch signals
 	ch := make(chan os.Signal)
 	signal.Notify(ch, os.Interrupt, os.Kill)
 	go listenForShutdown(ch)
-
-	// s := []string{opts.Addr, opts.Port}
-	// server := strings.Join(s, ':')
-	log.Printf("serving on %s:%s identifier %s", opts.Addr, opts.Port, opts.Identifier)
-	manners.ListenAndServe(opts.Addr+":"+opts.Port, handler)
-	//manners.ListenAndServe(server, handler)
-
 }
 
-func newHander() *handler {
-	return &handler{}
+// home is the home page
+func Home(w http.ResponseWriter, r *http.Request) {
+	t := template.Must(template.New("home.html").ParseFiles("home.html"))
+	data := struct {
+		Title   string
+		Address string
+		Port    string
+	}{
+		"trip calculator",
+		options.Addr,
+		options.Port,
+	}
+	err := t.Execute(w, data)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, "template writing problem : %s", err.Error())
+	}
 }
 
-type handler struct{}
+// trip is a POST endpoint returning json
+func Trips(w http.ResponseWriter, r *http.Request) {
 
-func (h *handler) ServeHTTP(res http.ResponseWriter, req *http.Request) {
+	// struct to contain results
+	type Result struct {
+		Error        string   `json:"error"`
+		Breach       bool     `json:"breach"`
+		StartDate    string   `json:"startdate"`
+		EndDate      string   `json:"enddate"`
+		DaysAway     int      `json:"daysaway"`
+		PartialTrips []string `json:"partialtrips"`
+	}
+	result := Result{}
+
+	log.Print(r)
+	w.Header().Set("Content-Type", "application/json")
+
+	errSender := func(note string, err error) {
+		w.WriteHeader(http.StatusBadRequest)
+		result.Error = note + " " + err.Error()
+		j, _ := json.Marshal(result)
+		w.Write(j)
+	}
 
 	var decoder = schema.NewDecoder()
 
-	log.Print(req)
-	fmt.Fprint(res, "Test http server : "+opts.Identifier+"\n")
-
-	err := req.ParseForm()
+	err := r.ParseForm()
 	if err != nil {
-		http.Error(res, "form error "+err.Error(), 500)
+		errSender("parse form error", err)
 		return
 	}
 
 	// extract holidays from front end
 	var holidays Holidays
-	err = decoder.Decode(&holidays, req.PostForm)
-	log.Print(req.PostForm)
+	err = decoder.Decode(&holidays, r.PostForm)
+	log.Print("postform ", r.PostForm)
+	if err != nil {
+		errSender("form decode error", err)
+		return
+	}
+
+	// trips (from module)
+	window := 180
+	compoundStayMaxLength := 90
+	resultsNo := 1
+
+	trips, err := trips.NewTrips(window, compoundStayMaxLength)
+	if err != nil {
+		errSender("could not make new trips", err)
+		return
+	}
+
+	for _, h := range holidays.Holidays {
+		err = trips.AddTrip(h.Start, h.End)
+		if err != nil {
+			errSender("error making holiday", err)
+			return
+		}
+	}
+
+	err = trips.Calculate()
+	if err != nil {
+		errSender("calculation error", err)
+		return
+	}
+
+	breach, windows := trips.LongestTrips(resultsNo)
+	result.Breach = breach
+	if len(windows) > 0 {
+		window := windows[0]
+		result.StartDate = window.Start.Format("2006-01-02")
+		result.EndDate = window.End.Format("2006-01-02")
+		result.DaysAway = window.DaysAway
+		for _, pt := range window.TripParts {
+			result.PartialTrips = append(result.PartialTrips, fmt.Sprintf("%s", pt))
+		}
+	}
+
+	w.WriteHeader(http.StatusOK)
+	result.Error = ""
+	j, _ := json.Marshal(result)
+	w.Write(j)
+
+}
+
+// tripVerbose is a verbose version of trip for non-json endpoints
+func TripsVerbose(w http.ResponseWriter, r *http.Request) {
+
+	var decoder = schema.NewDecoder()
+
+	log.Print(r)
+	fmt.Fprint(w, "Test http server\n")
+
+	err := r.ParseForm()
+	if err != nil {
+		http.Error(w, "form error "+err.Error(), 500)
+		return
+	}
+
+	// extract holidays from front end
+	var holidays Holidays
+	err = decoder.Decode(&holidays, r.PostForm)
+	log.Print(r.PostForm)
 	log.Print(holidays, err)
-	fmt.Fprintf(res, "holidays: %v\nerror: %v", holidays, err)
+	fmt.Fprintf(w, "holidays: %v\nerror: %v", holidays, err)
 
 	// trips (from module)
 	window := 180
@@ -85,7 +204,7 @@ func (h *handler) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 	trips, err := trips.NewTrips(window, compoundStayMaxLength)
 	if err != nil {
 		log.Printf("could not make new trips %v", err)
-		http.Error(res, "new trips error "+err.Error(), 500)
+		http.Error(w, "new trips error "+err.Error(), 500)
 		return
 	}
 
@@ -93,7 +212,7 @@ func (h *handler) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 		err = trips.AddTrip(h.Start, h.End)
 		if err != nil {
 			log.Printf("error making holiday %d %v %v", i, h, err)
-			http.Error(res, "holiday add error"+err.Error(), 500)
+			http.Error(w, "holiday add error"+err.Error(), 500)
 			return
 		}
 	}
@@ -102,7 +221,7 @@ func (h *handler) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		if err != nil {
 			log.Printf("calculation error %v", err)
-			http.Error(res, "calculation error"+err.Error(), 500)
+			http.Error(w, "calculation error"+err.Error(), 500)
 			return
 		}
 	}
@@ -114,12 +233,13 @@ func (h *handler) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 		fmt.Fprintf(res, fmt.Sprintf(tpl, breach, windows[0], trips.longestStay))
 	*/
 	tpl := "breach : %t\nwindow : %s"
-	fmt.Fprintf(res, fmt.Sprintf(tpl, breach, windows[0]))
+	fmt.Fprintf(w, fmt.Sprintf(tpl, breach, windows[0]))
 
 }
 
+// catch shutdown
 func listenForShutdown(ch <-chan os.Signal) {
 	<-ch
-	log.Print("Closing the Rtest http server")
+	log.Print("Shutting down the server")
 	manners.Close()
 }
