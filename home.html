@@ -47,13 +47,18 @@ $(document).ready(function () {
 
         $.ajax({
             type: "POST",
-            url: "http://127.0.0.1:8080/",
+            url: "http://{{.Address}}:{{.Port}}/trips",
             data: o,
             // dataType: "json",
             encode: true,
             crossDomain: true,
-            dataType: 'jsonp',
-            success: function() { alert("Success"); },
+            dataType: 'json',
+            // success: function() { alert("Success"); },
+            success: function(result) {
+                if (result) {
+                    // console.log(result);
+                }
+            },
             error: function() { alert('Failed!'); },
             headers: {
                 'Access-Control-Allow-Origin': '*'
