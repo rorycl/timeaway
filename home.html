@@ -49,30 +49,35 @@ $(document).ready(function () {
             type: "POST",
             url: "http://{{.Address}}:{{.Port}}/trips",
             data: o,
-            // dataType: "json",
             encode: true,
-            crossDomain: true,
             dataType: 'json',
-            // success: function() { alert("Success"); },
-            success: function(result) {
-                if (result) {
-                    // console.log(result);
-                }
-            },
-            error: function() { alert('Failed!'); },
+            crossDomain: true,
             headers: {
                 'Access-Control-Allow-Origin': '*'
             },
+        }).then(function(result) {
+            var data = result;
+            var partials = "";
+            for (i in data.partialtrips) {
+                partials += " ";
+                partials += data.partialtrips[i];
+            }
+            var contents2 = $(`
+<div id="results">
+<h2>Results</h2>
+<p>
+Error: ${data.error}<br />
+Breach: ${data.breach}</p>
+
+<p>The longest length of compound holidays lasted ${data.daysaway} for a window starting on ${data.startdate} and ending on ${data.enddate}.</p>
+The overlapping holiday days ran from ${partials}.</p></div>`);
+            $("#results").replaceWith(contents2);
         });
 
-        // console.log(o);
         event.preventDefault();
 
     });
 });
-</script>
-
-<script>
 </script>
 
 <script>
@@ -154,6 +159,9 @@ in 180 day rule. The order of the trips isn't important, but they can't overlap 
 <button class="submit" type="submit">Calculate</button>
 </section>
 </form>
+
+<div id="results">
+</div>
 
 </body>
 </html>
