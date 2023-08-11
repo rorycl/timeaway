@@ -35,7 +35,10 @@ $(document).ready(function () {
     // form capture function
     // https://www.digitalocean.com/community/tutorials/submitting-ajax-forms-with-jquery
     // and https://stackoverflow.com/questions/4291005/jquery-get-all-input-from-specific-form
-    $("form").submit(function (event) {
+        /*
+    $("form#trip").submit(function (event) {
+        event.preventDefault();
+        runstuff();
         var o = {}
         $("form#trip :input").each(function() {
             var input = $(this); // This is the jquery object of the input
@@ -44,7 +47,9 @@ $(document).ready(function () {
             o[n] = v;
         });
         console.log(o);
+        // alert(o);
 
+        /*
         $.ajax({
             type: "POST",
             url: "http://{{.Address}}:{{.Port}}/trips",
@@ -58,9 +63,9 @@ $(document).ready(function () {
         }).then(function(result) {
             var data = result;
             var partials = "";
-            for (i in data.partialtrips) {
+            for (p of data.partialtrips) {
                 partials += " ";
-                partials += data.partialtrips[i];
+                partials += p;
             }
             var contents2 = $(`
 <div id="results">
@@ -69,15 +74,28 @@ $(document).ready(function () {
 Error: ${data.error}<br />
 Breach: ${data.breach}</p>
 
-<p>The longest length of compound holidays lasted ${data.daysaway} for a window starting on ${data.startdate} and ending on ${data.enddate}.</p>
+<p>The longest length of compound holidays lasted ${data.daysaway} days for a window starting on ${data.startdate} and ending on ${data.enddate}.</p>
 The overlapping holiday days ran from ${partials}.</p></div>`);
             $("#results").replaceWith(contents2);
         });
-
-        event.preventDefault();
-
     });
+        */
 });
+</script>
+
+<script>
+    $(document).on('submit', 'form#trip', function(event){
+        event.preventDefault();
+        var o = {};
+        $("form#trip :input").each(function() {
+            var input = $(this); // This is the jquery object of the input
+            n = input.attr('name');
+            v = input.attr('value');
+            o[n] = v;
+        });
+        console.log(o);
+        // alert(o);
+    });
 </script>
 
 <script>
