@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+<script>
+$(document).ready(function () {
+    var rowIdx = 0;
+    $('#addBtn').on('click', function () {
+    rowIdx++;
+    var contents = $(`
+<p id="p${rowIdx}">
+<label for="start">start:</label>
+<input type="date" name="Holidays.${rowIdx}.Start" value="" min="2018-01-01" max="2033-01-01" required />
+<label for="start">end:</label>
+<input type="date" name="Holidays.${rowIdx}.End" value="" min="2018-01-01" max="2033-01-01" required />
+</p>
+<div id="rpl"></div>`);
+    $('#rpl').replaceWith(contents);
+    });
+
+    $("form").submit(function(event) {
+        var o = {}
+        $("form#trip :input").each(function() {
+            var input = $(this); 
+            n = input.attr('name');
+            v = input.val();
+            o[n] = v;
+        });
+        console.log(o);
+        event.preventDefault();
+    });
+});
+</script>
+<style>
+    label { display: inline-block; width: 50px }
+    input { width: 150px; margin-right: 20px }
+    .rmv { color: red }
+    button.submit { color: blue }
+</style>
+</head>
+<body>
+<form id="trip">
+<p id="p0">
+<label for="start">start:</label>
+<input type="date" name="Holidays.0.Start" value="2023-01-01" min="2018-01-01" max="2033-01-01" required />
+<label for="start">end:</label>
+<input type="date" name="Holidays.0.End" value="2023-01-01" min="2018-01-01" max="2033-01-01" required />
+</p>
+<div id="rpl"></div>
+<p>
+<button id="addBtn" type="button">add more trips</button>
+</p>
+<button class="submit" type="submit">Calculate</button>
+</form>
+</body>
+</html>
