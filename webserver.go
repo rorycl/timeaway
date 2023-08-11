@@ -138,21 +138,21 @@ func Trips(w http.ResponseWriter, r *http.Request) {
 
 	trips, err := trips.NewTrips(window, compoundStayMaxLength)
 	if err != nil {
-		errSender("could not make new trips", err)
+		errSender("Could not register trip:", err)
 		return
 	}
 
 	for _, h := range holidays.Holidays {
 		err = trips.AddTrip(h.Start, h.End)
 		if err != nil {
-			errSender("error making holiday", err)
+			errSender("Error adding trip:", err)
 			return
 		}
 	}
 
 	err = trips.Calculate()
 	if err != nil {
-		errSender("calculation error", err)
+		errSender("Calculation error: ", err)
 		return
 	}
 
