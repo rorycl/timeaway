@@ -19,7 +19,7 @@ type trip struct {
 // String returns a string representation of a trip
 func (t trip) String() string {
 	return fmt.Sprintf(
-		"start %s end %s", dayFmt(t.Start), dayFmt(t.End),
+		"%s to %s", dayFmt(t.Start), dayFmt(t.End),
 	)
 }
 
@@ -161,7 +161,7 @@ func (trips *Trips) AddTrip(start, end string) error {
 	for _, o := range trips.trips {
 		if ok := o.overlaps(t.Start, t.End); ok != nil {
 			return fmt.Errorf(
-				"trip %s:%s overlaps with %s:%s",
+				"trip %s to %s overlaps with %s to %s",
 				start, end, dayFmt(o.Start), dayFmt(o.End),
 			)
 		}
