@@ -17,7 +17,7 @@ $(document).ready(function () {
 <input type="date" name="Holidays.${rowIdx}.Start" value="" min="2018-01-01" max="2033-01-01" required />
 <label for="start">end:</label>
 <input type="date" name="Holidays.${rowIdx}.End" value="" min="2018-01-01" max="2033-01-01" required />
-<button class="rmv" type="button" onclick="remover('p${rowIdx}')";>remove</button>
+<button class="rmv ignore" type="button" onclick="remover('p${rowIdx}')";>remove</button>
 </p>
 <div id="rpl"></div>`);
     $('#rpl').replaceWith(contents);
@@ -35,21 +35,21 @@ $(document).ready(function () {
     // form capture function
     // https://www.digitalocean.com/community/tutorials/submitting-ajax-forms-with-jquery
     // and https://stackoverflow.com/questions/4291005/jquery-get-all-input-from-specific-form
-        /*
-    $("form#trip").submit(function (event) {
-        event.preventDefault();
-        runstuff();
+    $("form").submit(function (event) {
         var o = {}
         $("form#trip :input").each(function() {
             var input = $(this); // This is the jquery object of the input
             n = input.attr('name');
-            v = input.attr('value');
-            o[n] = v;
+            v = input.val();
+            if (!input.hasClass("ignore")) {
+                o[n] = v;
+            }
+            // if (n != "button") {
+            //     o[n] = v;
+            // }
         });
         console.log(o);
-        // alert(o);
 
-        /*
         $.ajax({
             type: "POST",
             url: "http://{{.Address}}:{{.Port}}/trips",
@@ -63,39 +63,32 @@ $(document).ready(function () {
         }).then(function(result) {
             var data = result;
             var partials = "";
-            for (p of data.partialtrips) {
+            for (i in data.partialtrips) {
                 partials += " ";
-                partials += p;
+                partials += data.partialtrips[i];
             }
-            var contents2 = $(`
+            var contents = $(`
 <div id="results">
 <h2>Results</h2>
 <p>
-Error: ${data.error}<br />
 Breach: ${data.breach}</p>
 
 <p>The longest length of compound holidays lasted ${data.daysaway} days for a window starting on ${data.startdate} and ending on ${data.enddate}.</p>
 The overlapping holiday days ran from ${partials}.</p></div>`);
+            $("#results").replaceWith(contents);
+        }).fail(function(result) {
+            data = result.responseJSON;
+            console.log("error");
+            console.log(data);
+            console.log(data.error);
+            var contents2 = $(`<div id="results"><h2>Results</h2><p>${data.error}</p></div>`);
             $("#results").replaceWith(contents2);
         });
-    });
-        */
-});
-</script>
 
-<script>
-    $(document).on('submit', 'form#trip', function(event){
         event.preventDefault();
-        var o = {};
-        $("form#trip :input").each(function() {
-            var input = $(this); // This is the jquery object of the input
-            n = input.attr('name');
-            v = input.attr('value');
-            o[n] = v;
-        });
-        console.log(o);
-        // alert(o);
+
     });
+});
 </script>
 
 <script>
@@ -118,7 +111,7 @@ function remover(val) {
     .rmv { color: red }
     button.submit { color: blue }
     #details { display: none;}
-
+    .error { color: red }
 </style>
 </head>
   
@@ -171,10 +164,10 @@ in 180 day rule. The order of the trips isn't important, but they can't overlap 
 <div id="rpl"></div>
 
 <p>
-<button id="addBtn" type="button">add more trips</button>
+<button id="addBtn" class="ignore" name="button" type="button">add more trips</button>
 </p>
 
-<button class="submit" type="submit">Calculate</button>
+<button class="submit ignore" type="submit">Calculate</button>
 </section>
 </form>
 
