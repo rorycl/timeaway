@@ -164,7 +164,9 @@ func Trips(w http.ResponseWriter, r *http.Request) {
 		result.EndDate = window.End.Format("2006-01-02")
 		result.DaysAway = window.DaysAway
 		for _, pt := range window.TripParts {
-			result.PartialTrips = append(result.PartialTrips, fmt.Sprintf("%s", pt))
+			result.PartialTrips = append(result.PartialTrips,
+				fmt.Sprintf("%s (%d days)", pt, pt.Days()),
+			)
 		}
 	}
 

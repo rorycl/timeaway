@@ -25,7 +25,7 @@ func (t trip) String() string {
 
 // days returns the number of inclusive days between the start and end
 // dates of a trip
-func (t trip) days() int {
+func (t trip) Days() int {
 	days := 0
 	for d := t.Start; !d.After(t.End); d = d.Add(durationDays(1)) {
 		days++
@@ -212,7 +212,7 @@ func (trips *Trips) Calculate() error {
 				continue
 			}
 			w.TripParts = append(w.TripParts, *partialTrip)
-			w.DaysAway += partialTrip.days()
+			w.DaysAway += partialTrip.Days()
 		}
 		trips.windows = append(trips.windows, w)
 		if w.DaysAway > trips.longestStay {

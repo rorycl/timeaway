@@ -72,11 +72,10 @@ $(document).ready(function () {
             var contents = $(`
 <div id="results">
 <h2>Results</h2>
-<p>
-Breach: ${data.breach}</p>
+<p class="breach-${data.breach}"> Breach: ${data.breach}</p>
 
 <p>The longest length of compound holidays lasted ${data.daysaway} days for a window starting on ${data.startdate} and ending on ${data.enddate}.</p>
-The holiday days within this window ran from ${partials}.</p></div>`);
+The holidays within this window ran from ${partials}.</p></div>`);
             $("#results").replaceWith(contents);
         }).fail(function(result) {
             data = result.responseJSON;
@@ -121,7 +120,7 @@ function remover(val) {
     button.submit { color: blue }
     #details { display: none;}
     .rmv { color: red }
-    .error { color: red }
+    .breach-true { color: red }
 </style>
 </head>
   
