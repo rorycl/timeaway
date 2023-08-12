@@ -136,32 +136,32 @@ func Trips(w http.ResponseWriter, r *http.Request) {
 	compoundStayMaxLength := 90
 	resultsNo := 1
 
-	trips, err := trips.NewTrips(window, compoundStayMaxLength)
+	trs, err := trips.NewTrips(window, compoundStayMaxLength)
 	if err != nil {
 		errSender("Could not register trip:", err)
 		return
 	}
 
 	for _, h := range holidays.Holidays {
-		err = trips.AddTrip(h.Start, h.End)
+		err = trs.AddTrip(h.Start, h.End)
 		if err != nil {
 			errSender("Error adding trip:", err)
 			return
 		}
 	}
 
-	err = trips.Calculate()
+	err = trs.Calculate()
 	if err != nil {
 		errSender("Calculation error: ", err)
 		return
 	}
 
-	breach, windows := trips.LongestTrips(resultsNo)
+	breach, windows := trs.LongestTrips(resultsNo)
 	result.Breach = breach
 	if len(windows) > 0 {
 		window := windows[0]
-		result.StartDate = window.Start.Format("2006-01-02")
-		result.EndDate = window.End.Format("2006-01-02")
+		result.StartDate = trips.DayFmt(window.Start)
+		result.EndDate = trips.DayFmt(window.End)
 		result.DaysAway = window.DaysAway
 		for _, pt := range window.TripParts {
 			result.PartialTrips = append(result.PartialTrips,
