@@ -1,10 +1,25 @@
 <!DOCTYPE html>
 <html>
-  
 <head>
-    <title>{{.Title}}</title>
-  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
-
+<style>
+    * {font-family: Arial, Helvetica, sans-serif; font-size: 12pt;}
+    body {margin: 40px 40px; max-width: 860px}
+    h1 {font-size: 14pt}
+    h2 {font-size: 13pt}
+    label { display: inline-block; width: 50px }
+    input { width: 150px; margin-right: 20px; font-size: 11pt; }
+    button { font-size: 11pt; }
+    button.submit { color: blue }
+    ul { padding-left: 15px; margin-top: 0px; }
+    li { padding-top: 7px; }
+    #results { margin-top: 2em; }
+    #details { display: none;}
+    .rmv { color: red }
+    .breach-true { color: red }
+    p.pre-list { margin-bottom: 1px; }
+</style>
+<title>{{.Title}}</title>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
 <script>
 $(document).ready(function () {
     // add fields
@@ -75,7 +90,7 @@ $(document).ready(function () {
 <p class="breach-${data.breach}"> Breach: ${data.breach}</p>
 
 <p>The longest length of compound holidays lasted ${data.daysaway} days for a window starting on ${data.startdate} and ending on ${data.enddate}.</p>
-The holidays within this window ran from ${partials}.</p></div>`);
+<p class="pre-list">The holidays within this window ran from:</p>${partials}</div>`);
             $("#results").replaceWith(contents);
         }).fail(function(result) {
             data = result.responseJSON;
@@ -110,18 +125,6 @@ function remover(val) {
 };
 </script>
 
-<style>
-    * {font-family: Arial, Helvetica, sans-serif;}
-    body {margin: 60px 40px; max-width: 900px}
-    h1 {font-size: 14pt}
-    h2 {font-size: 13pt}
-    label { display: inline-block; width: 50px }
-    input { width: 150px; margin-right: 20px }
-    button.submit { color: blue }
-    #details { display: none;}
-    .rmv { color: red }
-    .breach-true { color: red }
-</style>
 </head>
   
 <body>
