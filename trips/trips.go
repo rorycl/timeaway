@@ -19,7 +19,7 @@ type trip struct {
 // String returns a string representation of a trip
 func (t trip) String() string {
 	return fmt.Sprintf(
-		"%s to %s", dayFmt(t.Start), dayFmt(t.End),
+		"%s to %s", DayFmt(t.Start), DayFmt(t.End),
 	)
 }
 
@@ -73,7 +73,7 @@ type window struct {
 func (w window) String() string {
 	tpl := `%s : %s (%d)`
 	s := fmt.Sprintf(
-		tpl, dayFmt(w.Start), dayFmt(w.End), w.DaysAway,
+		tpl, DayFmt(w.Start), DayFmt(w.End), w.DaysAway,
 	)
 	for _, t := range w.TripParts {
 		s = s + fmt.Sprintf(" %s", t)
@@ -109,8 +109,8 @@ func (trips Trips) String() string {
 		tpl,
 		trips.window,
 		trips.maxStay,
-		dayFmt(trips.startFrame),
-		dayFmt(trips.endFrame),
+		DayFmt(trips.startFrame),
+		DayFmt(trips.endFrame),
 		trips.longestStay,
 		len(trips.trips),
 		len(trips.windows),
@@ -162,7 +162,7 @@ func (trips *Trips) AddTrip(start, end string) error {
 		if ok := o.overlaps(t.Start, t.End); ok != nil {
 			return fmt.Errorf(
 				"trip %s to %s overlaps with %s to %s",
-				start, end, dayFmt(o.Start), dayFmt(o.End),
+				start, end, DayFmt(o.Start), DayFmt(o.End),
 			)
 		}
 	}
@@ -252,9 +252,9 @@ func durationDays(d int) time.Duration {
 	return time.Duration(d) * time.Hour * 24
 }
 
-// dayFmt returns the 2006-01-02 representation of a date
-func dayFmt(d time.Time) string {
-	return d.Format("2006-01-02")
+// DayFmt returns a custom string representation of a date
+func DayFmt(d time.Time) string {
+	return d.Format("Monday 2 January 2006")
 }
 
 // testStub for checking window sizes to be ignored

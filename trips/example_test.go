@@ -30,6 +30,6 @@ func Example() {
 
 	// Output:
 	// breach? true
-	// top window result : 2022-12-17 : 2023-06-14 (91) 2023-01-06 to 2023-02-07 2023-02-11 to 2023-04-04 2023-06-10 to 2023-06-14
+	// top window result : Saturday 17 December 2022 : Wednesday 14 June 2023 (91) Friday 6 January 2023 to Tuesday 7 February 2023 Saturday 11 February 2023 to Tuesday 4 April 2023 Saturday 10 June 2023 to Wednesday 14 June 2023
 	// longest compound trip : 91
 }
