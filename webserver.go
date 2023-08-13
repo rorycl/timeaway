@@ -1,13 +1,15 @@
-// Rory 07 October 2019
 package main
 
 import (
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"text/template"
 	"time"
 
@@ -20,24 +22,45 @@ import (
 )
 
 var options struct {
-	Port string `short:"p" long:"port" description:"port to run on"`
-	Addr string `short:"a" long:"address" description:"network address to run on"`
+	Port string `short:"p" long:"port" description:"port to run on" default:"8000"`
+	Addr string `short:"a" long:"address" description:"network address to run on" default:"127.0.0.1"`
 }
 
 func init() {
 	log.SetOutput(os.Stderr)
 	flags.Parse(&options)
+
+	// verify options
+	port, err := strconv.Atoi(options.Port)
+	if err != nil || port == 0 {
+		fmt.Printf("port %s invalid; exiting\n", options.Port)
+		os.Exit(1)
+	}
+	if net.ParseIP(options.Addr) == nil {
+		fmt.Printf("address %s invalid; exiting\n", options.Addr)
+		os.Exit(1)
+	}
 }
 
-// holiday describes the start and end dates of a trip
-type Holiday struct {
-	Start string `schema:Start`
-	End   string `schema:End`
-}
-
-// holidays is a slice of holiday
+// Holidays describes the start and end dates of a series of trips
 type Holidays struct {
-	Holidays []Holiday
+	Start []string `schema:Start`
+	End   []string `schema:End`
+}
+
+var stopError = errors.New("no more holidays")
+
+// each returns the pairs of holidays
+func (h Holidays) each(i int) (start string, end string, err error) {
+	if len(h.Start) != len(h.End) {
+		err = errors.New("length of start and end arrays are different")
+		return
+	}
+	if i > len(h.Start)-1 {
+		err = stopError
+		return
+	}
+	return h.Start[i], h.End[i], nil
 }
 
 func main() {
@@ -46,6 +69,7 @@ func main() {
 	// is a catch-all pattern
 	r := mux.NewRouter()
 	r.HandleFunc("/home", Home)
+	r.HandleFunc("/favicon.ico", Favicon)
 	r.HandleFunc("/trips", Trips)
 	r.HandleFunc("/trips-verbose", TripsVerbose)
 
@@ -71,9 +95,13 @@ func main() {
 	go listenForShutdown(ch)
 }
 
-// home is the home page
+//go:embed tpl/home.html
+var homeTemplate string
+
+// Home is the home page
 func Home(w http.ResponseWriter, r *http.Request) {
-	t := template.Must(template.New("home.html").ParseFiles("home.html"))
+	// t := // template.Must(template.New("home.html").ParseFiles("home.html"))
+	t := template.Must(template.New("home.html").Parse(homeTemplate))
 	data := struct {
 		Title   string
 		Address string
@@ -88,6 +116,15 @@ func Home(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, "template writing problem : %s", err.Error())
 	}
+}
+
+//go:embed tpl/favicon.svg
+var favicon string
+
+// Favicon serves an svg favicon
+func Favicon(w http.ResponseWriter, r *http.Request) {
+	// http.ServeFile(w, r, "favicon.svg")
+	fmt.Fprint(w, favicon)
 }
 
 // trip is a POST endpoint returning json
@@ -114,8 +151,6 @@ func Trips(w http.ResponseWriter, r *http.Request) {
 		w.Write(j)
 	}
 
-	var decoder = schema.NewDecoder()
-
 	err := r.ParseForm()
 	if err != nil {
 		errSender("parse form error", err)
@@ -123,6 +158,7 @@ func Trips(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// extract holidays from front end
+	var decoder = schema.NewDecoder()
 	var holidays Holidays
 	err = decoder.Decode(&holidays, r.PostForm)
 	log.Print("postform ", r.PostForm)
@@ -142,8 +178,16 @@ func Trips(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	for _, h := range holidays.Holidays {
-		err = trs.AddTrip(h.Start, h.End)
+	for i := 0, i++ {
+		start, end, err := holidays.Each(i)
+		if errors.Is(stopError) {
+			break
+		}
+		if err != nil {
+			errSender("Error extracting holidays:", err)
+			return
+		}
+		err = trs.AddTrip(start, end)
 		if err != nil {
 			errSender("Error adding trip:", err)
 			return
@@ -191,6 +235,8 @@ func TripsVerbose(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	log.Printf("parseform %+v\n", r.PostForm)
+
 	// extract holidays from front end
 	var holidays Holidays
 	err = decoder.Decode(&holidays, r.PostForm)
@@ -230,10 +276,6 @@ func TripsVerbose(w http.ResponseWriter, r *http.Request) {
 
 	breach, windows := trips.LongestTrips(resultsNo)
 
-	/*
-		tpl := "breach : %t\nwindow : %s\nlength : %d\n"
-		fmt.Fprintf(res, fmt.Sprintf(tpl, breach, windows[0], trips.longestStay))
-	*/
 	tpl := "breach : %t\nwindow : %s"
 	fmt.Fprintf(w, fmt.Sprintf(tpl, breach, windows[0]))
 
