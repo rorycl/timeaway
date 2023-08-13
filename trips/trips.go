@@ -155,14 +155,14 @@ func (trips *Trips) AddTrip(start, end string) error {
 
 	// check validity of this trip
 	if t.End.Before(t.Start) {
-		return fmt.Errorf("start date %s after %s", t.Start, t.End)
+		return fmt.Errorf("start date %s after %s", dayShortFmt(t.Start), dayShortFmt(t.End))
 	}
 	// check no overlaps
 	for _, o := range trips.trips {
 		if ok := o.overlaps(t.Start, t.End); ok != nil {
 			return fmt.Errorf(
 				"trip %s to %s overlaps with %s to %s",
-				start, end, DayFmt(o.Start), DayFmt(o.End),
+				start, end, dayShortFmt(o.Start), dayShortFmt(o.End),
 			)
 		}
 	}
@@ -255,6 +255,11 @@ func durationDays(d int) time.Duration {
 // DayFmt returns a custom string representation of a date
 func DayFmt(d time.Time) string {
 	return d.Format("Monday 2 January 2006")
+}
+
+// DayFmt returns a short custom string representation of a date
+func dayShortFmt(d time.Time) string {
+	return d.Format("2006-01-02")
 }
 
 // testStub for checking window sizes to be ignored
