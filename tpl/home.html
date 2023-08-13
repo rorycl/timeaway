@@ -21,24 +21,24 @@
 <title>{{.Title}}</title>
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
 <script>
+// add additional trip fields when the button is pressed
 $(document).ready(function () {
-    // add fields
     var rowIdx = 0;
     $('#addBtn').on('click', function () {
     rowIdx++;
     var contents = $(`
 <p id="p${rowIdx}">
 <label for="start">start:</label>
-<input type="date" class="start" name="Holidays.${rowIdx}.Start" value="" min="2018-01-01" max="2033-01-01" required />
+<input type="date" class="start" name="Start" value="" min="2018-01-01" max="2033-01-01" required />
 <label for="start">end:</label>
-<input type="date" class="end" name="Holidays.${rowIdx}.End" value="" min="2018-01-01" max="2033-01-01" required />
+<input type="date" class="end" name="End" value="" min="2018-01-01" max="2033-01-01" required />
 <button class="rmv ignore" type="button" onclick="remover('p${rowIdx}')";>remove</button>
 </p>
 <div id="rpl"></div>`);
     $('#rpl').replaceWith(contents);
     });
 
-    // reveal details in details id
+    // toggle further details 
     $("#showdetails a").on('click', function(event){
         event.preventDefault();
         $("#details").toggle()
@@ -51,31 +51,39 @@ $(document).ready(function () {
     // https://www.digitalocean.com/community/tutorials/submitting-ajax-forms-with-jquery
     // and https://stackoverflow.com/questions/4291005/jquery-get-all-input-from-specific-form
     $("form").submit(function (event) {
-        var o = {}
+        var dates = {
+            Start : [],
+            End : [],
+        };
         $("form#trip :input").each(function() {
             var input = $(this); // This is the jquery object of the input
             n = input.attr('name');
             v = input.val();
             if (!input.hasClass("ignore")) {
-                o[n] = v;
+                dates[n].push(v);
             }
-            // if (n != "button") {
-            //     o[n] = v;
-            // }
         });
-        // console.log(o);
+        var postData = []
+        dates.Start.forEach((s, i) => {
+            var d = {};
+            d.Start = s;
+            d.End = dates.End[i];
+            postData.push(d);
+        });
+        // console.log(postData);
 
+        // post a json representation of the postData to PostURL
         $.ajax({
             type: "POST",
-            url: "/trips",
-            data: o,
+            url: "{{ .PostURL }}",
+            data: JSON.stringify(postData),
             encode: true,
             dataType: 'json',
             crossDomain: true,
             headers: {
                 'Access-Control-Allow-Origin': '*'
             },
-        }).then(function(result) {
+        }).then(function(result) { // write success data to the results div
             var data = result;
             var partials = "<ul>";
             for (i in data.partialtrips) {
@@ -92,7 +100,7 @@ $(document).ready(function () {
 <p>The longest length of compound holidays lasted ${data.daysaway} days for a window starting on ${data.startdate} and ending on ${data.enddate}.</p>
 <p class="pre-list">The holidays within this window ran from:</p>${partials}</div>`);
             $("#results").replaceWith(contents);
-        }).fail(function(result) {
+        }).fail(function(result) { // write the failure to the results div
             data = result.responseJSON;
             var contents2 = $(`<div id="results"><h2>Results</h2><p>${data.error}</p></div>`);
             $("#results").replaceWith(contents2);
@@ -138,9 +146,9 @@ function remover(val) {
 <p id="showdetails">Click <a href="">here</a> to show details of and background to the calculation method.</p>
 
 <div id="details">
-<p>According to the European Commission website (as at August 2023), the Regulation requires British travellers to the
-Schengen countries to visits of a maximum duration of 90 days in any 180 day period. The date of entry shall
-be considered as the first day of stay on the territory of the Member States and the date of exit shall be considered as
+<p>According to the European Commission website (as at August 2023), Regulation No 610/2013 requires British travellers
+to the Schengen countries to visits of a maximum duration of 90 days in any 180 day period. The date of entry shall be
+considered as the first day of stay on the territory of the Member States and the date of exit shall be considered as
 the last day of stay on the territory of the Member States.</p>
 
 <p>Note that the non-EU member states Iceland, Liechtenstein, Norway and Switzerland are included in the Schengen group,
@@ -161,17 +169,17 @@ two trips a single trip.</p>
 
 <h2>Make a calculation</h2>
 
-<p>Provide a list of past and possible future trips into the calculator to learn if you are likely to breach the 90 days
-in 180 day rule. The order of the trips isn't important, but they shouldn't overlap in time.</p>
+<p>Provide a list of past and possible future trips into the calculator to learn if these breach the 90 day in 180 day
+rule. The order of the trips isn't important, but they shouldn't overlap in time.</p>
 
 <form id="trip" action="http://127.0.0.1:8080/" method="post">
 <section>
 
 <p id="p0">
 <label for="start">start:</label>
-<input type="date" class="start" name="Holidays.0.Start" value="2023-01-01" min="2018-01-01" max="2033-01-01" required />
+<input type="date" class="start" name="Start" value="2023-01-01" min="2018-01-01" max="2033-01-01" required />
 <label for="start">end:</label>
-<input type="date" class="end" name="Holidays.0.End" value="" min="2018-01-01" max="2033-01-01" required />
+<input type="date" class="end" name="End" value="" min="2018-01-01" max="2033-01-01" required />
 </p>
 <div id="rpl"></div>
 <p>
