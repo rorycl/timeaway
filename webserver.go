@@ -3,7 +3,9 @@ package main
 import (
 	_ "embed"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
@@ -42,26 +44,7 @@ func init() {
 	}
 }
 
-// Holidays describes the start and end dates of a series of trips
-type Holidays struct {
-	Start []string `schema:Start`
-	End   []string `schema:End`
-}
-
 var stopError = errors.New("no more holidays")
-
-// each returns the pairs of holidays
-func (h Holidays) each(i int) (start string, end string, err error) {
-	if len(h.Start) != len(h.End) {
-		err = errors.New("length of start and end arrays are different")
-		return
-	}
-	if i > len(h.Start)-1 {
-		err = stopError
-		return
-	}
-	return h.Start[i], h.End[i], nil
-}
 
 func main() {
 
@@ -100,16 +83,20 @@ var homeTemplate string
 
 // Home is the home page
 func Home(w http.ResponseWriter, r *http.Request) {
-	// t := // template.Must(template.New("home.html").ParseFiles("home.html"))
+	// file version
+	// t := template.Must(template.New("home.html").ParseFiles("tpl/home.html"))
+	// embedded version
 	t := template.Must(template.New("home.html").Parse(homeTemplate))
 	data := struct {
 		Title   string
 		Address string
 		Port    string
+		PostURL string
 	}{
 		"trip calculator",
 		options.Addr,
 		options.Port,
+		"/trips",
 	}
 	err := t.Execute(w, data)
 	if err != nil {
@@ -141,7 +128,6 @@ func Trips(w http.ResponseWriter, r *http.Request) {
 	}
 	result := Result{}
 
-	log.Print(r)
 	w.Header().Set("Content-Type", "application/json")
 
 	errSender := func(note string, err error) {
@@ -151,19 +137,35 @@ func Trips(w http.ResponseWriter, r *http.Request) {
 		w.Write(j)
 	}
 
-	err := r.ParseForm()
-	if err != nil {
-		errSender("parse form error", err)
+	if r.Method != "POST" {
+		err := errors.New(r.Method)
+		errSender("endpoint only accepts POST requests, got", err)
 		return
 	}
 
-	// extract holidays from front end
-	var decoder = schema.NewDecoder()
-	var holidays Holidays
-	err = decoder.Decode(&holidays, r.PostForm)
-	log.Print("postform ", r.PostForm)
+	// read body
+	body, err := ioutil.ReadAll(r.Body)
+	defer r.Body.Close()
 	if err != nil {
-		errSender("form decode error", err)
+		errSender("body reading error", err)
+		return
+	}
+	// log.Printf("body%+v\n", string(body))
+
+	// extract holidays from front end
+	type holiday struct {
+		Start string `json:Start`
+		End   string `json:End`
+	}
+	var holidays []holiday
+
+	err = json.Unmarshal(body, &holidays)
+	if err != nil {
+		errSender("form json decoding error", err)
+		return
+	}
+	if len(holidays) < 1 {
+		errSender("no holidays were found", nil)
 		return
 	}
 
@@ -178,25 +180,17 @@ func Trips(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	for i := 0, i++ {
-		start, end, err := holidays.Each(i)
-		if errors.Is(stopError) {
-			break
-		}
+	for _, h := range holidays {
+		err = trs.AddTrip(h.Start, h.End)
 		if err != nil {
-			errSender("Error extracting holidays:", err)
-			return
-		}
-		err = trs.AddTrip(start, end)
-		if err != nil {
-			errSender("Error adding trip:", err)
+			errSender("could not add trip:", err)
 			return
 		}
 	}
 
 	err = trs.Calculate()
 	if err != nil {
-		errSender("Calculation error: ", err)
+		errSender("calculation error: ", err)
 		return
 	}
 
@@ -238,6 +232,14 @@ func TripsVerbose(w http.ResponseWriter, r *http.Request) {
 	log.Printf("parseform %+v\n", r.PostForm)
 
 	// extract holidays from front end
+	type holiday struct {
+		Start string `json:Start`
+		End   string `json:End`
+	}
+	type Holidays struct {
+		Holidays []holiday
+	}
+
 	var holidays Holidays
 	err = decoder.Decode(&holidays, r.PostForm)
 	log.Print(r.PostForm)
