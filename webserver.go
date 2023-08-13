@@ -28,7 +28,10 @@ var options struct {
 	Addr string `short:"a" long:"address" description:"network address to run on" default:"127.0.0.1"`
 }
 
-func init() {
+var stopError = errors.New("no more holidays")
+
+func main() {
+
 	log.SetOutput(os.Stderr)
 	flags.Parse(&options)
 
@@ -42,11 +45,6 @@ func init() {
 		fmt.Printf("address %s invalid; exiting\n", options.Addr)
 		os.Exit(1)
 	}
-}
-
-var stopError = errors.New("no more holidays")
-
-func main() {
 
 	// endpoint routing; gorilla mux is used because "/" in http.NewServeMux
 	// is a catch-all pattern
