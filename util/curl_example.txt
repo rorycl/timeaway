@@ -1,23 +1,34 @@
-curl example
+echo "curl to succeed, with breach true"
+curl -s -X POST -d '
+[{"Start":"2022-12-01","End":"2022-12-02"},
+ {"Start":"2023-01-02","End":"2023-03-30"},
+ {"Start":"2023-04-01","End":"2023-04-02"}
+]' 127.0.0.1:8080/trips | jq .
+echo ""
 
-curl -X POST \
-    -d "Holidays.0.Start=2023-12-01" \
-    -d "Holidays.0.End=2023-12-02"  \
-    -d "Holidays.1.Start=2023-01-01" \
-    -d "Holidays.1.End=2023-01-30" \
-    -d "Holidays.2.Start=2023-04-01" \
-    -d "Holidays.2.End=2023-06-15" 127.0.0.1:8080/trips
+echo "curl to succeed, with breach false"
+curl -s -X POST -d '
+[{"Start":"2022-12-01","End":"2022-12-02"},
+ {"Start":"2023-01-02","End":"2023-03-28"},
+ {"Start":"2023-04-01","End":"2023-04-02"}
+]' 127.0.0.1:8080/trips | jq .
+echo ""
 
-output:
+echo ""
+echo "curl call to fail due to overlap"
+curl -s -X POST -d '
+[{"Start":"2022-12-01","End":"2022-12-02"},
+ {"Start":"2023-01-02","End":"2023-03-30"},
+ {"Start":"2023-03-29","End":"2023-04-02"}
+]' 127.0.0.1:8080/trips | jq .
+echo ""
 
-{
-  "error": "",
-  "breach": true,
-  "startdate": "2023-01-01",
-  "enddate": "2023-06-29",
-  "daysaway": 106,
-  "partialtrips": [
-    "start 2023-01-01 end 2023-01-30",
-    "start 2023-04-01 end 2023-06-15"
-  ]
-}
+echo ""
+echo "curl call to fail due to end date before start date"
+curl -s -X POST -d '[{"Start":"2022-12-01","End":"2022-11-01"}]' 127.0.0.1:8080/trips | jq .
+echo ""
+
+echo ""
+echo "curl call to fail due to get"
+curl -s -X GET -d '[{"Start":"2022-12-01","End":"2022-11-01"}]' 127.0.0.1:8080/trips | jq .
+echo ""
