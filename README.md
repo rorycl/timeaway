@@ -44,7 +44,7 @@ will give the following output if the server is running on 127.0.0.1:8080/:
 
 ## Example
 
-![example gif](util/example.gif)
+![](util/example.gif)
 
 ## License
 
