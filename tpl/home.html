@@ -73,16 +73,12 @@ $(document).ready(function () {
         // build url
         // const newURL = new URL(window.location.href);
         const newURL = new URL(window.location.href);
-        const newURLWithParams = new URL(newURL.origin + "/" + newURL.pathname);
+        const newURLWithParams = new URL(newURL.origin + newURL.pathname);
         dates.Start.forEach((s, i) => {
             newURLWithParams.searchParams.append("Start", s);
             newURLWithParams.searchParams.append("End", dates.End[i]);
         });
         // console.log(newURLWithParams.href);
-
-        // set the url in the window to allow saving with a bookmark
-        let stateObj = {};
-        window.history.pushState(stateObj, "trip calculator", newURLWithParams.href);
 
         // post a json representation of the postData to PostURL
         $.ajax({
@@ -118,6 +114,11 @@ $(document).ready(function () {
             $("#results").replaceWith(contents2);
         });
         event.preventDefault();
+
+        // set the url in the window to allow saving with a bookmark
+        let stateObj = {};
+        window.history.pushState(stateObj, "trip calculator", newURLWithParams.href);
+
 
     });
 

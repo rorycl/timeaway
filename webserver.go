@@ -28,9 +28,8 @@ var options struct {
 	Addr string `short:"a" long:"address" description:"network address to run on" default:"127.0.0.1"`
 }
 
-var stopError = errors.New("no more holidays")
-
-var InDevelopment bool = true
+// set to false for production
+var InDevelopment bool = false
 
 func main() {
 
