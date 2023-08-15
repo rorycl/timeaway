@@ -23,7 +23,7 @@
 <script>
 // add additional trip fields when the button is pressed
 $(document).ready(function () {
-    var rowIdx = 0;
+    var rowIdx = {{ len .InputDates }};
     $('#addBtn').on('click', function () {
     rowIdx++;
     var contents = $(`
@@ -49,7 +49,7 @@ $(document).ready(function () {
 
     // form capture function
     // https://www.digitalocean.com/community/tutorials/submitting-ajax-forms-with-jquery
-    // and https://stackoverflow.com/questions/4291005/jquery-get-all-input-from-specific-form
+    // https://stackoverflow.com/questions/4291005/jquery-get-all-input-from-specific-form
     $("form").submit(function (event) {
         var dates = {
             Start : [],
@@ -70,7 +70,19 @@ $(document).ready(function () {
             d.End = dates.End[i];
             postData.push(d);
         });
-        // console.log(postData);
+        // build url
+        // const newURL = new URL(window.location.href);
+        const newURL = new URL(window.location.href);
+        const newURLWithParams = new URL(newURL.origin + "/" + newURL.pathname);
+        dates.Start.forEach((s, i) => {
+            newURLWithParams.searchParams.append("Start", s);
+            newURLWithParams.searchParams.append("End", dates.End[i]);
+        });
+        // console.log(newURLWithParams.href);
+
+        // set the url in the window to allow saving with a bookmark
+        let stateObj = {};
+        window.history.pushState(stateObj, "trip calculator", newURLWithParams.href);
 
         // post a json representation of the postData to PostURL
         $.ajax({
@@ -175,11 +187,24 @@ rule. The order of the trips isn't important, but they shouldn't overlap in time
 <form id="trip" action="http://127.0.0.1:8080/" method="post">
 <section>
 
-<p id="p0">
+<!-- show dates in url -->
+{{ if .InputDates }}
+{{ range $index, $date := .InputDates }}
+<p id="p{{ $index }}">
+<label for="start">start:</label>
+<input type="date" class="start" name="Start" value="{{ $date.Start }}" min="2018-01-01" max="2033-01-01" required />
+<label for="start">end:</label>
+<input type="date" class="end" name="End" value="{{ $date.End }}" min="2018-01-01" max="2033-01-01" required />
+<button class="rmv ignore" type="button" onclick="remover('p{{ $index }}')";>remove</button>
+</p>
+{{ end }}
+{{ end }}
+<p id="p{{ len .InputDates }}">
 <label for="start">start:</label>
 <input type="date" class="start" name="Start" value="2023-01-01" min="2018-01-01" max="2033-01-01" required />
 <label for="start">end:</label>
 <input type="date" class="end" name="End" value="" min="2018-01-01" max="2033-01-01" required />
+<button class="rmv ignore" type="button" onclick="remover('p{{ len .InputDates }}')";>remove</button>
 </p>
 <div id="rpl"></div>
 <p>

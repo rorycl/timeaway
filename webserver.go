@@ -30,6 +30,8 @@ var options struct {
 
 var stopError = errors.New("no more holidays")
 
+var InDevelopment bool = true
+
 func main() {
 
 	log.SetOutput(os.Stderr)
@@ -79,22 +81,66 @@ func main() {
 //go:embed tpl/home.html
 var homeTemplate string
 
+// holiday structure
+type holiday struct {
+	Start string `json:Start `
+	End   string `json:End`
+}
+
+// holidayByURL
+type holidaysByURL struct {
+	Start []string `schema:"Start"`
+	End   []string `schema:"End"`
+}
+
+// holidays are a slice of holiday
+var holidays []holiday
+
 // Home is the home page
 func Home(w http.ResponseWriter, r *http.Request) {
-	// file version
-	// t := template.Must(template.New("home.html").ParseFiles("tpl/home.html"))
-	// embedded version
+
 	t := template.Must(template.New("home.html").Parse(homeTemplate))
+	if InDevelopment {
+		t = template.Must(template.New("home.html").ParseFiles("tpl/home.html"))
+	}
+
+	// grab dates from url, if any
+	inputDates := func() []holiday {
+		hols := []holiday{}
+		var decoder = schema.NewDecoder()
+		var hbu holidaysByURL
+		_ = decoder.Decode(&hbu, r.URL.Query()) // ignore errors
+		for i, s := range hbu.Start {
+			_, err := time.Parse("2006-01-02", s)
+			if err != nil {
+				continue
+			}
+			if i > len(hbu.End)-1 {
+				continue
+			}
+			_, err = time.Parse("2006-01-02", hbu.End[i])
+			if err != nil {
+				continue
+			}
+			hols = append(hols, holiday{s, hbu.End[i]})
+		}
+		return hols
+	}()
+
+	log.Println(inputDates)
+
 	data := struct {
-		Title   string
-		Address string
-		Port    string
-		PostURL string
+		Title      string
+		Address    string
+		Port       string
+		PostURL    string
+		InputDates []holiday
 	}{
 		"trip calculator",
 		options.Addr,
 		options.Port,
 		"/trips",
+		inputDates,
 	}
 	err := t.Execute(w, data)
 	if err != nil {
@@ -149,13 +195,6 @@ func Trips(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// log.Printf("body%+v\n", string(body))
-
-	// extract holidays from front end
-	type holiday struct {
-		Start string `json:Start`
-		End   string `json:End`
-	}
-	var holidays []holiday
 
 	err = json.Unmarshal(body, &holidays)
 	if err != nil {
