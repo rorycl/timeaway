@@ -1,6 +1,7 @@
 package trips
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -245,6 +246,48 @@ func (trips *Trips) LongestTrips(resultsNo int) (breach bool, windows []window) 
 		windows = windows[:resultsNo]
 	}
 	return
+}
+
+// AsJSON returns a json summary of the trips
+func (trips *Trips) AsJSON() ([]byte, error) {
+
+	// partialTrips represents those trips covered by the largest trip
+	// window
+	type partialTrips struct {
+		Start    time.Time `json:start`    // start date
+		End      time.Time `json:end`      // end date
+		Duration int       `json:duration` // duration in days
+	}
+
+	// struct to contain results
+	type JSONResult struct {
+		Error        string         `json:"error"`
+		Breach       bool           `json:"breach"`
+		StartDate    time.Time      `json:"windowStart"`
+		EndDate      time.Time      `json:"windowEnd"`
+		DaysAway     int            `json:"windowDaysAway"`
+		PartialTrips []partialTrips `json:"partialTrips"`
+	}
+
+	result := JSONResult{}
+
+	breach, windows := trips.LongestTrips(1) // get longest window only
+	if len(windows) == 0 {
+		result.Error = "no results found"
+		return json.Marshal(result)
+	}
+
+	result.Breach = breach
+	window := windows[0] // only top (longest & earliest) window of interest
+	result.StartDate = window.Start
+	result.EndDate = window.End
+	result.DaysAway = window.DaysAway
+	for _, pt := range window.TripParts {
+		result.PartialTrips = append(result.PartialTrips,
+			partialTrips{pt.Start, pt.End, pt.Days()},
+		)
+	}
+	return json.Marshal(result)
 }
 
 // durationDays returns a duration for the number of days specified

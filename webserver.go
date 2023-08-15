@@ -53,7 +53,6 @@ func main() {
 	r.HandleFunc("/home", Home)
 	r.HandleFunc("/favicon.ico", Favicon)
 	r.HandleFunc("/trips", Trips)
-	r.HandleFunc("/trips-verbose", TripsVerbose)
 
 	// create a handler wrapped in a recovery handler and logging handler
 	hdl := handlers.RecoveryHandler()(
@@ -69,7 +68,10 @@ func main() {
 	log.Printf("serving on %s:%s", options.Addr, options.Port)
 
 	// wrap server with manners
-	manners.ListenAndServe(options.Addr+":"+options.Port, server.Handler)
+	err = manners.ListenAndServe(options.Addr+":"+options.Port, server.Handler)
+	if err != nil {
+		log.Printf("fatal server error: %v", err)
+	}
 
 	// catch signals
 	ch := make(chan os.Signal)
@@ -160,23 +162,15 @@ func Favicon(w http.ResponseWriter, r *http.Request) {
 // trip is a POST endpoint returning json
 func Trips(w http.ResponseWriter, r *http.Request) {
 
-	// struct to contain results
-	type Result struct {
-		Error        string   `json:"error"`
-		Breach       bool     `json:"breach"`
-		StartDate    string   `json:"startdate"`
-		EndDate      string   `json:"enddate"`
-		DaysAway     int      `json:"daysaway"`
-		PartialTrips []string `json:"partialtrips"`
-	}
-	result := Result{}
-
 	w.Header().Set("Content-Type", "application/json")
 
 	errSender := func(note string, err error) {
 		w.WriteHeader(http.StatusBadRequest)
-		result.Error = note + " " + err.Error()
-		j, _ := json.Marshal(result)
+		j, _ := json.Marshal(struct {
+			Error string
+		}{
+			Error: note + " " + err.Error(),
+		})
 		w.Write(j)
 	}
 
@@ -208,7 +202,6 @@ func Trips(w http.ResponseWriter, r *http.Request) {
 	// trips (from module)
 	window := 180
 	compoundStayMaxLength := 90
-	resultsNo := 1
 
 	trs, err := trips.NewTrips(window, compoundStayMaxLength)
 	if err != nil {
@@ -230,92 +223,14 @@ func Trips(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	breach, windows := trs.LongestTrips(resultsNo)
-	result.Breach = breach
-	if len(windows) > 0 {
-		window := windows[0]
-		result.StartDate = trips.DayFmt(window.Start)
-		result.EndDate = trips.DayFmt(window.End)
-		result.DaysAway = window.DaysAway
-		for _, pt := range window.TripParts {
-			result.PartialTrips = append(result.PartialTrips,
-				fmt.Sprintf("%s (%d days)", pt, pt.Days()),
-			)
-		}
+	json, err := trs.AsJSON()
+	if err != nil {
+		errSender("json encoding error: ", err)
+		return
 	}
 
 	w.WriteHeader(http.StatusOK)
-	result.Error = ""
-	j, _ := json.Marshal(result)
-	w.Write(j)
-
-}
-
-// tripVerbose is a verbose version of trip for non-json endpoints
-func TripsVerbose(w http.ResponseWriter, r *http.Request) {
-
-	var decoder = schema.NewDecoder()
-
-	log.Print(r)
-	fmt.Fprint(w, "Test http server\n")
-
-	err := r.ParseForm()
-	if err != nil {
-		http.Error(w, "form error "+err.Error(), 500)
-		return
-	}
-
-	log.Printf("parseform %+v\n", r.PostForm)
-
-	// extract holidays from front end
-	type holiday struct {
-		Start string `json:Start`
-		End   string `json:End`
-	}
-	type Holidays struct {
-		Holidays []holiday
-	}
-
-	var holidays Holidays
-	err = decoder.Decode(&holidays, r.PostForm)
-	log.Print(r.PostForm)
-	log.Print(holidays, err)
-	fmt.Fprintf(w, "holidays: %v\nerror: %v", holidays, err)
-
-	// trips (from module)
-	window := 180
-	compoundStayMaxLength := 90
-	resultsNo := 1
-
-	trips, err := trips.NewTrips(window, compoundStayMaxLength)
-	if err != nil {
-		log.Printf("could not make new trips %v", err)
-		http.Error(w, "new trips error "+err.Error(), 500)
-		return
-	}
-
-	for i, h := range holidays.Holidays {
-		err = trips.AddTrip(h.Start, h.End)
-		if err != nil {
-			log.Printf("error making holiday %d %v %v", i, h, err)
-			http.Error(w, "holiday add error"+err.Error(), 500)
-			return
-		}
-	}
-
-	err = trips.Calculate()
-	if err != nil {
-		if err != nil {
-			log.Printf("calculation error %v", err)
-			http.Error(w, "calculation error"+err.Error(), 500)
-			return
-		}
-	}
-
-	breach, windows := trips.LongestTrips(resultsNo)
-
-	tpl := "breach : %t\nwindow : %s"
-	fmt.Fprintf(w, fmt.Sprintf(tpl, breach, windows[0]))
+	w.Write(json)
 
 }
 

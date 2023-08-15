@@ -1,7 +1,9 @@
 package trips
 
 import (
+	"encoding/json"
 	"fmt"
+	"reflect"
 	"testing"
 )
 
@@ -81,10 +83,9 @@ func TestTrips(t *testing.T) {
 		t.Fatalf("calculation error %v", err)
 	}
 
-	fmt.Println(trips)
+	t.Log(trips)
 
 	breach, windows := trips.LongestTrips(resultsNo)
-	fmt.Printf("breach : %t\n", breach)
 	for i, w := range windows {
 		fmt.Printf("%d : %+v\n", i, w)
 	}
@@ -95,6 +96,31 @@ func TestTrips(t *testing.T) {
 
 	if breach != false {
 		t.Error("Expected breach to be false, got true")
+	}
+
+	// jsoncheck
+	jsonResult, err := trips.AsJSON()
+	if err != nil {
+		t.Errorf("json reading error %v\n", err)
+	}
+	check := map[string]interface{}{}
+	err = json.Unmarshal(jsonResult, &check)
+
+	t.Logf("log %+v\n", check)
+
+	if check["error"] != "" {
+		t.Errorf("error should be empty, got %s", check["error"])
+	}
+	if check["breach"] != false {
+		t.Errorf("breach should be false, got %v", check["breach"])
+	}
+	if check["windowDaysAway"] != float64(trips.longestStay) {
+		t.Errorf("window days away should be %v got %v", float64(trips.longestStay), check["windowDaysAway"])
+	}
+
+	v := reflect.ValueOf(check["partialTrips"])
+	if v.Len() != 2 {
+		t.Errorf("json partial trips should be 2, got %d", v.Len())
 	}
 
 }
@@ -145,6 +171,23 @@ func TestTripsToBreach(t *testing.T) {
 
 	if breach != true {
 		t.Error("Expected breach to be true, got false")
+	}
+
+	// jsoncheck
+	jsonResult, err := trips.AsJSON()
+	if err != nil {
+		t.Errorf("json reading error %v\n", err)
+	}
+	check := map[string]interface{}{}
+	err = json.Unmarshal(jsonResult, &check)
+
+	t.Logf("log %+v\n", check)
+
+	if check["breach"] != true {
+		t.Errorf("breach should be true, got %v", check["breach"])
+	}
+	if check["windowDaysAway"] != float64(trips.longestStay) {
+		t.Errorf("window days away should be %v got %v", float64(trips.longestStay), check["windowDaysAway"])
 	}
 
 }
