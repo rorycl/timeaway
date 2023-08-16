@@ -13,7 +13,9 @@ type partialTrips struct {
 	Duration int       `json:duration` // duration in days
 }
 
-// TripsJSON provides a json representation of a Trips structure
+// TripsJSON provides a json representation of a Trips structure for the
+// window with the longest compound trips. Where several windows have
+// the same trip length the earliest window is used.
 type TripsJSON struct {
 	Error        string         `json:"error"`
 	Breach       bool           `json:"breach"`
