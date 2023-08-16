@@ -1,9 +1,7 @@
 package trips
 
 import (
-	"encoding/json"
 	"fmt"
-	"reflect"
 	"testing"
 )
 
@@ -98,29 +96,29 @@ func TestTrips(t *testing.T) {
 		t.Error("Expected breach to be false, got true")
 	}
 
-	// jsoncheck
+	// get json result
 	jsonResult, err := trips.AsJSON()
 	if err != nil {
-		t.Errorf("json reading error %v\n", err)
-	}
-	check := map[string]interface{}{}
-	err = json.Unmarshal(jsonResult, &check)
-
-	t.Logf("log %+v\n", check)
-
-	if check["error"] != "" {
-		t.Errorf("error should be empty, got %s", check["error"])
-	}
-	if check["breach"] != false {
-		t.Errorf("breach should be false, got %v", check["breach"])
-	}
-	if check["windowDaysAway"] != float64(trips.longestStay) {
-		t.Errorf("window days away should be %v got %v", float64(trips.longestStay), check["windowDaysAway"])
+		t.Fatalf("json reading error %v\n", err)
 	}
 
-	v := reflect.ValueOf(check["partialTrips"])
-	if v.Len() != 2 {
-		t.Errorf("json partial trips should be 2, got %d", v.Len())
+	// unmarshal back to struct
+	check, err := UnmarshalTripsJSON(jsonResult)
+	if err != nil {
+		t.Fatalf("unmarshal error %v", err)
+	}
+
+	// t.Logf("tripsjson %+v\n", check)
+
+	if check.Breach != false {
+		t.Errorf("breach should be false, got %v", check.Breach)
+	}
+	if check.DaysAway != trips.longestStay {
+		t.Errorf("window days away should be %v got %v", trips.longestStay, check.DaysAway)
+	}
+
+	if len(check.PartialTrips) != 2 {
+		t.Errorf("partial trips should be 2, got %d", len(check.PartialTrips))
 	}
 
 }
@@ -178,16 +176,24 @@ func TestTripsToBreach(t *testing.T) {
 	if err != nil {
 		t.Errorf("json reading error %v\n", err)
 	}
-	check := map[string]interface{}{}
-	err = json.Unmarshal(jsonResult, &check)
 
-	t.Logf("log %+v\n", check)
-
-	if check["breach"] != true {
-		t.Errorf("breach should be true, got %v", check["breach"])
+	// unmarshal back to struct
+	check, err := UnmarshalTripsJSON(jsonResult)
+	if err != nil {
+		t.Fatalf("unmarshal error %v", err)
 	}
-	if check["windowDaysAway"] != float64(trips.longestStay) {
-		t.Errorf("window days away should be %v got %v", float64(trips.longestStay), check["windowDaysAway"])
+
+	// t.Logf("tripsjson %+v\n", check)
+
+	if check.Breach != true {
+		t.Errorf("breach should be true , got %v", check.Breach)
+	}
+	if check.DaysAway != trips.longestStay {
+		t.Errorf("window days away should be %v got %v", trips.longestStay, check.DaysAway)
+	}
+
+	if len(check.PartialTrips) != 2 {
+		t.Errorf("partial trips should be 2, got %d", len(check.PartialTrips))
 	}
 
 }
