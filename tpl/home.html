@@ -93,22 +93,17 @@ $(document).ready(function () {
             },
         }).then(function(result) { // write success data to the results div
             var data = result;
-            var partials = "<ul>";
-            for (i in data.partialTrips) {
-                let p = data.partialTrips[i];
-                let dayTpl = `${p.Duration > 1 ? 'days' : 'day'}`
-                partials += "<li>";
-                partials += `${dateToString(p.Start)} to ${dateToString(p.End)} (${p.Duration} ${dayTpl})`;
-                partials += "</li>";
-            }
-            partials += "</ul>";
+            var partials = listBuilder(data.partialTrips);
+            var holidays = listBuilder(data.holidays);
+            var breach = `${data.windowDaysAway > 90 ? 'breach' : 'do not breach'}`
             var contents = $(`
 <div id="results">
 <h2>Results</h2>
-<p class="breach-${data.breach}"> Breach: ${data.breach}</p>
-
+<p class="breach-${data.breach}">These holidays ${breach} the 90 day in 180 rule.</p>
 <p>The longest length of compound holidays lasted ${data.windowDaysAway} days for a window starting on ${dateToString(data.windowStart)} and ending on ${dateToString(data.windowEnd)}.</p>
-<p class="pre-list">The holidays within this window ran from:</p>${partials}</div>`);
+<p class="pre-list">The holidays within this window ran from:</p>${partials}</p>
+<hr />
+<p class="pre-list">The holidays under analysis were:</p>${holidays}</div>`);
             $("#results").replaceWith(contents);
         }).fail(function(result) { // write the failure to the results div
             data = result.responseJSON;
@@ -121,11 +116,23 @@ $(document).ready(function () {
         let stateObj = {};
         window.history.pushState(stateObj, "trip calculator", newURLWithParams.href);
 
-
     });
-
-
 });
+</script>
+
+<script>
+function listBuilder(dataList) {
+    var output = "<ul>";
+    for (i in dataList) {
+        let p = dataList[i];
+        let dayTpl = `${p.Duration > 1 ? 'days' : 'day'}`
+        output += "<li>";
+        output += `${dateToString(p.Start)} to ${dateToString(p.End)} (${p.Duration} ${dayTpl})`;
+        output += "</li>";
+    }
+    output += "</ul>";
+    return output;
+}
 </script>
 
 <script>

@@ -128,8 +128,6 @@ func Home(w http.ResponseWriter, r *http.Request) {
 		return hols
 	}()
 
-	log.Println(inputDates)
-
 	data := struct {
 		Title      string
 		Address    string
