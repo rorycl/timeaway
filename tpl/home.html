@@ -107,7 +107,7 @@ $(document).ready(function () {
 <h2>Results</h2>
 <p class="breach-${data.breach}"> Breach: ${data.breach}</p>
 
-<p>The longest length of compound holidays lasted ${data.daysaway} days for a window starting on ${dateToString(data.windowStart)} and ending on ${dateToString(data.windowEnd)}.</p>
+<p>The longest length of compound holidays lasted ${data.windowDaysAway} days for a window starting on ${dateToString(data.windowStart)} and ending on ${dateToString(data.windowEnd)}.</p>
 <p class="pre-list">The holidays within this window ran from:</p>${partials}</div>`);
             $("#results").replaceWith(contents);
         }).fail(function(result) { // write the failure to the results div
