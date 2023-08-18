@@ -1,8 +1,8 @@
 package trips
 
 import (
-	"testing"
 	"fmt"
+	"testing"
 )
 
 // generate trips for tests
@@ -65,6 +65,10 @@ func TestJSONSuccess(t *testing.T) {
 
 	if len(check.PartialTrips) != len(trs.windows[0].TripParts) {
 		t.Errorf("partial trs should be %d, got %d", len(trs.windows[0].TripParts), len(check.PartialTrips))
+	}
+
+	if len(check.Holidays) != len(trs.trips) {
+		t.Errorf("number of trip want %d, got %d", len(trs.windows[0].TripParts), len(check.PartialTrips))
 	}
 
 }

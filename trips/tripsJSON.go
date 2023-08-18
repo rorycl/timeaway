@@ -5,24 +5,17 @@ import (
 	"time"
 )
 
-// partialTrips describe the trips making up part of each trip in the
-// window
-type partialTrips struct {
-	Start    time.Time `json:start`    // start date
-	End      time.Time `json:end`      // end date
-	Duration int       `json:duration` // duration in days
-}
-
 // TripsJSON provides a json representation of a Trips structure for the
 // window with the longest compound trips. Where several windows have
 // the same trip length the earliest window is used.
 type TripsJSON struct {
-	Error        string         `json:"error"`
-	Breach       bool           `json:"breach"`
-	StartDate    time.Time      `json:"windowStart"`
-	EndDate      time.Time      `json:"windowEnd"`
-	DaysAway     int            `json:"windowDaysAway"`
-	PartialTrips []partialTrips `json:"partialTrips"`
+	Error        string    `json:"error"`
+	Breach       bool      `json:"breach"`
+	StartDate    time.Time `json:"windowStart"`
+	EndDate      time.Time `json:"windowEnd"`
+	DaysAway     int       `json:"windowDaysAway"`
+	PartialTrips []trip    `json:"partialTrips"`
+	Holidays     []trip    `json:"holidays"`
 }
 
 // UnmarshalTripsJSON decodes a byte sequence to a TripsJSON struct
@@ -50,7 +43,12 @@ func (trips *Trips) AsJSON() ([]byte, error) {
 	tj.DaysAway = window.DaysAway
 	for _, pt := range window.TripParts {
 		tj.PartialTrips = append(tj.PartialTrips,
-			partialTrips{pt.Start, pt.End, pt.Days()},
+			trip{pt.Start, pt.End, pt.Days()},
+		)
+	}
+	for _, t := range trips.trips {
+		tj.Holidays = append(tj.Holidays,
+			trip{t.Start, t.End, t.Days()},
 		)
 	}
 	return json.Marshal(tj)

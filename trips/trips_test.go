@@ -121,6 +121,10 @@ func TestTrips(t *testing.T) {
 		t.Errorf("partial trips should be 2, got %d", len(check.PartialTrips))
 	}
 
+	if len(check.Holidays) != 6 {
+		t.Errorf("holiday trips should be 6, got %d", len(check.Holidays))
+	}
+
 }
 
 // the same test as above, but with a lower compoundStayMaxLength to
@@ -194,6 +198,10 @@ func TestTripsToBreach(t *testing.T) {
 
 	if len(check.PartialTrips) != 2 {
 		t.Errorf("partial trips should be 2, got %d", len(check.PartialTrips))
+	}
+
+	if len(check.Holidays) != 6 {
+		t.Errorf("holiday trips should be 6, got %d", len(check.Holidays))
 	}
 
 }
@@ -289,6 +297,10 @@ func TestTripsLong(t *testing.T) {
 
 	if trips.longestStay != 181 {
 		t.Errorf("Expected longest stay to be 181, got %d", trips.longestStay)
+	}
+
+	if len(trips.trips) != 7 {
+		t.Errorf("holiday trips should be 7, got %d", len(trips.trips))
 	}
 
 }

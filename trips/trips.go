@@ -12,8 +12,9 @@ import (
 // trip is a simple description of a trip with start and end date. The
 // trip struct is also used to describe partial trips for windows.trip
 type trip struct {
-	Start time.Time
-	End   time.Time
+	Start    time.Time `json:start`    // start date
+	End      time.Time `json:end`      // end date
+	Duration int       `json:duration` // duration in days
 }
 
 // String returns a string representation of a trip
@@ -175,6 +176,7 @@ func (trips *Trips) AddTrip(start, end string) error {
 	if trips.endFrame.Before(t.End) {
 		trips.endFrame = t.End
 	}
+	t.Duration = t.Days()
 
 	trips.trips = append(trips.trips, t)
 	return nil
