@@ -94,9 +94,11 @@ $(document).ready(function () {
         }).then(function(result) { // write success data to the results div
             var data = result;
             var partials = "<ul>";
-            for (i in data.partialtrips) {
+            for (i in data.partialTrips) {
+                let p = data.partialTrips[i];
+                let dayTpl = `${p.Duration > 1 ? 'days' : 'day'}`
                 partials += "<li>";
-                partials += data.partialtrips[i];
+                partials += `${dateToString(p.Start)} to ${dateToString(p.End)} (${p.Duration} ${dayTpl})`;
                 partials += "</li>";
             }
             partials += "</ul>";
@@ -105,7 +107,7 @@ $(document).ready(function () {
 <h2>Results</h2>
 <p class="breach-${data.breach}"> Breach: ${data.breach}</p>
 
-<p>The longest length of compound holidays lasted ${data.daysaway} days for a window starting on ${data.startdate} and ending on ${data.enddate}.</p>
+<p>The longest length of compound holidays lasted ${data.daysaway} days for a window starting on ${dateToString(data.windowStart)} and ending on ${dateToString(data.windowEnd)}.</p>
 <p class="pre-list">The holidays within this window ran from:</p>${partials}</div>`);
             $("#results").replaceWith(contents);
         }).fail(function(result) { // write the failure to the results div
@@ -124,6 +126,18 @@ $(document).ready(function () {
 
 
 });
+</script>
+
+<script>
+// format a javascript date as a string
+function dateToString(d) {
+    const thisDate = new Date(d);
+    // return thisDate.toDateString();
+    var ds = thisDate.toLocaleDateString(); // typically 5/12/2020
+    const weekday = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+    var wd = weekday[thisDate.getDay()];
+    return wd + " " + ds;
+}
 </script>
 
 <script>
