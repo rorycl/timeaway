@@ -1,7 +1,7 @@
 package trips
 
 import (
-	"fmt"
+	"log"
 	"testing"
 )
 
@@ -83,10 +83,7 @@ func TestTrips(t *testing.T) {
 
 	t.Log(trips)
 
-	breach, windows := trips.LongestTrips(resultsNo)
-	for i, w := range windows {
-		fmt.Printf("%d : %+v\n", i, w)
-	}
+	breach, _ := trips.LongestTrips(resultsNo)
 
 	if trips.longestStay != 4 {
 		t.Errorf("Expected longest stay to be 4, got %d", trips.longestStay)
@@ -159,12 +156,9 @@ func TestTripsToBreach(t *testing.T) {
 		t.Fatalf("calculation error %v", err)
 	}
 
-	fmt.Println(trips)
-
 	breach, windows := trips.LongestTrips(resultsNo)
-	fmt.Printf("breach : %t\n", breach)
 	for i, w := range windows {
-		fmt.Printf("%d : %+v\n", i, w)
+		t.Logf("%d : %+v\n", i, w)
 	}
 
 	if trips.longestStay != 4 {
@@ -233,12 +227,9 @@ func TestTripsLonger(t *testing.T) {
 		t.Fatalf("calculation error %v", err)
 	}
 
-	fmt.Println(trips)
-
 	breach, windows := trips.LongestTrips(5)
-	fmt.Printf("breach : %t\n", breach)
 	for i, w := range windows {
-		fmt.Printf("%d : %+v\n", i, w)
+		t.Logf("%d : %+v\n", i, w)
 	}
 
 	// start 2023-04-02 end 2023-05-10 is 39 days inclusive
@@ -283,12 +274,9 @@ func TestTripsLong(t *testing.T) {
 		t.Fatalf("calculation error %v", err)
 	}
 
-	fmt.Println(trips)
-
 	breach, windows := trips.LongestTrips(resultsNo)
-	fmt.Printf("breach : %t\n", breach)
 	for i, w := range windows {
-		fmt.Printf("%d : %+v\n", i, w)
+		log.Printf("%d : %+v\n", i, w)
 	}
 
 	if breach != true {

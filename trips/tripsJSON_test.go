@@ -1,7 +1,6 @@
 package trips
 
 import (
-	"fmt"
 	"testing"
 )
 
@@ -80,7 +79,7 @@ func TestJSONError(t *testing.T) {
 		t.Fatal("expected generate trips error")
 	}
 
-	fmt.Printf("trs %+v\n", trs)
+	t.Logf("trs %+v\n", trs)
 
 	// get json result
 	jsonResult, err := trs.AsJSON()
