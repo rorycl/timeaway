@@ -1,6 +1,6 @@
 # timeaway
 
-version 0.2 : 18 August 2023
+version 0.3 : 18 August 2023
 
 A small web app to calculate if the compound length of trips to Schengen
 countries by non-EU visitors conform with Regulation (EU) No 610/2013
