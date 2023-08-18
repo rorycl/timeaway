@@ -31,8 +31,6 @@ var options struct {
 // production is default; set InDevelopment to true with build tag
 var InDevelopment bool = false
 
-// +build development
-
 func main() {
 
 	log.SetOutput(os.Stderr)
