@@ -28,8 +28,10 @@ var options struct {
 	Addr string `short:"a" long:"address" description:"network address to run on" default:"127.0.0.1"`
 }
 
-// set to false for production
+// production is default; set InDevelopment to true with build tag
 var InDevelopment bool = false
+
+// +build development
 
 func main() {
 
