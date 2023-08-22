@@ -30,14 +30,12 @@ func (trips *Trips) AsJSON() ([]byte, error) {
 
 	tj := TripsJSON{}
 
-	breach, windows := trips.LongestTrips(1) // get longest window only
-	if len(windows) == 0 {
-		tj.Error = "no results found"
+	breach, window, err := trips.LongestTrip() // get longest window only
+	if err != nil {
+		tj.Error = err.Error()
 		return json.Marshal(tj)
 	}
-
 	tj.Breach = breach
-	window := windows[0] // only top (longest & earliest) window of interest
 	tj.StartDate = window.Start
 	tj.EndDate = window.End
 	tj.DaysAway = window.DaysAway

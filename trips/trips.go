@@ -249,6 +249,17 @@ func (trips *Trips) LongestTrips(resultsNo int) (breach bool, windows []window) 
 	return
 }
 
+// LongestTrip returns the first result from LongestTrips
+func (trips *Trips) LongestTrip() (breach bool, w window, err error) {
+	breach, windows := trips.LongestTrips(1)
+	if len(windows) == 0 {
+		err = errors.New("no results found")
+		return
+	}
+	w = windows[0]
+	return breach, w, nil
+}
+
 // durationDays returns a duration for the number of days specified
 func durationDays(d int) time.Duration {
 	return time.Duration(d) * time.Hour * 24
