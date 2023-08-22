@@ -74,7 +74,7 @@ func main() {
 	}
 
 	// catch signals
-	ch := make(chan os.Signal)
+	ch := make(chan os.Signal, 1)
 	signal.Notify(ch, os.Interrupt, os.Kill)
 	go listenForShutdown(ch)
 }
@@ -84,8 +84,8 @@ var homeTemplate string
 
 // holiday structure
 type holiday struct {
-	Start string `json:Start `
-	End   string `json:End`
+	Start string `json:"Start"`
+	End   string `json:"End"`
 }
 
 // holidayByURL
