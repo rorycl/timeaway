@@ -9,8 +9,8 @@ on:
   pull_request:
     branches: [ "main" ]
 
-permissions:
-  contents: read
+# permissions:
+#   contents: write
 
 jobs:
 
@@ -103,6 +103,6 @@ jobs:
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           file: timeaway-linux-amd64
-          tag: ${{ github.ref_name }}
+          # tag: ${{ github.ref_name }}
           overwrite: true
           body: test workflow release
