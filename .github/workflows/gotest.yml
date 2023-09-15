@@ -96,6 +96,7 @@ jobs:
         # https://github.com/actions/download-artifact
         # You can use the upload-artifact and download-artifact actions to share data between jobs in a workflow
         uses: actions/download-artifact@v3
+        path: downloads
       - name: show download
         run: ls -R
       - name: create release
