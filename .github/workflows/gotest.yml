@@ -45,7 +45,7 @@ jobs:
 
   build-artifact:
     needs: golangci
-    name: Build App
+    name: artifacts
     runs-on: ubuntu-latest
     steps:
       - name: Set up Go 1.x
@@ -61,7 +61,7 @@ jobs:
           mkdir artifacts
           cp timeaway artifacts/
       - name: Archive
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v3
         with:
           name: timeaway-linux-amd64
           path: artifacts/
