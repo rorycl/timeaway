@@ -1,10 +1,10 @@
-package main
+package web
 
 // https://ieftimov.com/posts/testing-in-go-testing-http-servers/
 // https://bignerdranch.com/blog/using-the-httptest-package-in-golang/
 
 import (
-	"io/ioutil"
+	"io"
 	"log"
 	"net/http"
 	"net/http/httptest"
@@ -72,7 +72,7 @@ func TestTripsEndpoint(t *testing.T) {
 
 			res := w.Result()
 			defer res.Body.Close()
-			data, err := ioutil.ReadAll(res.Body)
+			data, err := io.ReadAll(res.Body)
 			if err != nil {
 				log.Fatal(err)
 			}

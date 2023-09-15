@@ -3,7 +3,6 @@ package trips
 import (
 	"errors"
 	"fmt"
-	"os"
 	"sort"
 	"strings"
 	"time"
@@ -12,9 +11,9 @@ import (
 // trip is a simple description of a trip with start and end date. The
 // trip struct is also used to describe partial trips for windows.trip
 type trip struct {
-	Start    time.Time `json:start`    // start date
-	End      time.Time `json:end`      // end date
-	Duration int       `json:duration` // duration in days
+	Start    time.Time `json:"start"`    // start date
+	End      time.Time `json:"end"`      // end date
+	Duration int       `json:"duration"` // duration in days
 }
 
 // String returns a string representation of a trip
@@ -273,15 +272,4 @@ func DayFmt(d time.Time) string {
 // DayFmt returns a short custom string representation of a date
 func dayShortFmt(d time.Time) string {
 	return d.Format("2006-01-02")
-}
-
-// testStub for checking window sizes to be ignored
-func testStub(d time.Time, w window) {
-	testDay, _ := time.Parse("2006-01-02", "2023-01-11")
-	if d.Equal(testDay) {
-		fmt.Println("2023-01-11")
-		fmt.Printf("day : %s\n", d.Format("2006-01-02"))
-		fmt.Printf("window: %s - %s", w.Start.Format("2006-01-02"), w.End.Format("2006-01-02"))
-		os.Exit(1)
-	}
 }

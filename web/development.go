@@ -1,6 +1,7 @@
+//go:build development
 // +build development
 
-package main
+package web
 
 import "fmt"
 

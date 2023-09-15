@@ -14,27 +14,27 @@
 //
 // example:
 //
-// 	window := 180               // window in days
-// 	compoundStayMaxLength := 90 // longest allowed compound trip length in days
+//	window := 180               // window in days
+//	compoundStayMaxLength := 90 // longest allowed compound trip length in days
 //
-// 	// create a new trips struct
-// 	trs, _ := NewTrips(window, compoundStayMaxLength)
+//	// create a new trips struct
+//	trs, _ := NewTrips(window, compoundStayMaxLength)
 //
-// 	// add trips
-// 	_ = trs.AddTrip("2022-01-01", "2022-01-01")
-// 	_ = trs.AddTrip("2023-01-06", "2023-02-07")
-// 	_ = trs.AddTrip("2023-02-11", "2023-04-04")
-// 	_ = trs.AddTrip("2023-06-10", "2023-06-14")
+//	// add trips
+//	_ = trs.AddTrip("2022-01-01", "2022-01-01")
+//	_ = trs.AddTrip("2023-01-06", "2023-02-07")
+//	_ = trs.AddTrip("2023-02-11", "2023-04-04")
+//	_ = trs.AddTrip("2023-06-10", "2023-06-14")
 //
-// 	// calculate
-// 	_ = trs.Calculate()
+//	// calculate
+//	_ = trs.Calculate()
 //
-// 	/* show the longest trips */
-// 	breach, longestWindow, _ := trs.LongestTrip()
+//	/* show the longest trips */
+//	breach, longestWindow, _ := trs.LongestTrip()
 //
-// 	fmt.Printf("breach? %t\n", breach)
-// 	fmt.Printf("top longestWindow result : %v\n", longestWindow)
-// 	fmt.Printf("trip details:%v", trs)
+//	fmt.Printf("breach? %t\n", breach)
+//	fmt.Printf("top longestWindow result : %v\n", longestWindow)
+//	fmt.Printf("trip details:%v", trs)
 package trips
 
 // vim: noai:ts=4:tw=120

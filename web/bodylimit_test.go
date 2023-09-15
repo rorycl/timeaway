@@ -1,8 +1,9 @@
-package main
+package web
 
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -42,7 +43,10 @@ func TestBodyLimit(t *testing.T) {
 				t.Fatal(err)
 			}
 		}
-		buf.WriteTo(w)
+		_, err = buf.WriteTo(w)
+		if err != nil {
+			panic(fmt.Sprintf("could not write to w %v", err))
+		}
 	})
 
 	for _, tt := range []struct {

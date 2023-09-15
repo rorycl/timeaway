@@ -1,17 +1,16 @@
-package main
+package web
 
 import (
 	_ "embed"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
-	"net"
 	"net/http"
 	"os"
 	"os/signal"
-	"strconv"
+	"syscall"
 	"text/template"
 	"time"
 
@@ -19,32 +18,35 @@ import (
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/schema"
-	flags "github.com/jessevdk/go-flags"
 	"github.com/rorycl/timeaway/trips"
 )
-
-var options struct {
-	Port string `short:"p" long:"port" description:"port to run on" default:"8000"`
-	Addr string `short:"a" long:"address" description:"network address to run on" default:"127.0.0.1"`
-}
 
 // production is default; set InDevelopment to true with build tag
 var InDevelopment bool = false
 
-func main() {
+// WebMaxHeaderBytes is the largest number of header bytes accepted by
+// the webserver
+var WebMaxHeaderBytes int = 1 << 17 // ~125k
 
-	log.SetOutput(os.Stderr)
-	flags.Parse(&options)
+// ServerAddress is the default Server network address
+var ServerAddress string = "127.0.0.1"
 
-	// verify options
-	port, err := strconv.Atoi(options.Port)
-	if err != nil || port == 0 {
-		fmt.Printf("port %s invalid; exiting\n", options.Port)
-		os.Exit(1)
+// ServerPort is the default Server network port
+var ServerPort string = "8000"
+
+// Serve runs the web server on the specified address and port
+func Serve(addr string, port string) {
+
+	if addr == "" {
+		addr = ServerAddress
+	} else {
+		ServerAddress = addr
 	}
-	if net.ParseIP(options.Addr) == nil {
-		fmt.Printf("address %s invalid; exiting\n", options.Addr)
-		os.Exit(1)
+
+	if port == "" {
+		port = ServerPort
+	} else {
+		ServerPort = port
 	}
 
 	// endpoint routing; gorilla mux is used because "/" in http.NewServeMux
@@ -73,22 +75,22 @@ func main() {
 
 	// configure server options
 	server := &http.Server{
-		Addr:           options.Addr + ":" + options.Port,
+		Addr:           addr + ":" + port,
 		ReadTimeout:    1 * time.Second,
 		WriteTimeout:   3 * time.Second,
-		MaxHeaderBytes: 1 << 17, // ~125k
+		MaxHeaderBytes: WebMaxHeaderBytes,
 	}
-	log.Printf("serving on %s:%s", options.Addr, options.Port)
+	log.Printf("serving on %s:%s", addr, port)
 
 	// wrap server with manners
-	err = manners.ListenAndServe(options.Addr+":"+options.Port, server.Handler)
+	err := manners.ListenAndServe(addr+":"+port, server.Handler)
 	if err != nil {
 		log.Printf("fatal server error: %v", err)
 	}
 
 	// catch signals
 	ch := make(chan os.Signal, 1)
-	signal.Notify(ch, os.Interrupt, os.Kill)
+	signal.Notify(ch, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
 	go listenForShutdown(ch)
 }
 
@@ -149,8 +151,8 @@ func Home(w http.ResponseWriter, r *http.Request) {
 		InputDates []holiday
 	}{
 		"trip calculator",
-		options.Addr,
-		options.Port,
+		ServerAddress,
+		ServerPort,
 		"/trips",
 		inputDates,
 	}
@@ -182,7 +184,10 @@ func Trips(w http.ResponseWriter, r *http.Request) {
 		}{
 			Error: note + " " + err.Error(),
 		})
-		w.Write(j)
+		_, err = w.Write(j)
+		if err != nil {
+			log.Printf("could not write trips json error %v", err)
+		}
 	}
 
 	if r.Method != "POST" {
@@ -192,7 +197,7 @@ func Trips(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// read body
-	body, err := ioutil.ReadAll(r.Body)
+	body, err := io.ReadAll(r.Body)
 	defer r.Body.Close()
 	if err != nil {
 		errSender("body reading error", err)
@@ -241,7 +246,10 @@ func Trips(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusOK)
-	w.Write(json)
+	_, err = w.Write(json)
+	if err != nil {
+		log.Printf("could not write trips error %v", err)
+	}
 
 }
 
