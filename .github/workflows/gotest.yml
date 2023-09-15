@@ -17,15 +17,14 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
-    - name: Set up Go
-      uses: actions/setup-go@v4
-      with:
-        go-version: '1.21'
-    - name: Build
-      run: go build -v ./...
-    - name: Test
-      run: go test -v ./...
+      - name: checkout
+        uses: actions/checkout@v3 # needed for cache
+      - name: set up go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.21'
+      - name: test
+        run: go test -v ./...
 
   # https://docs.github.com/en/actions/using-jobs/using-jobs-in-a-workflow#example-not-requiring-successful-dependent-jobs
   golangci:
@@ -48,19 +47,20 @@ jobs:
     name: artifacts
     runs-on: ubuntu-latest
     steps:
-      - name: Set up Go 1.x
+      - name: checkout
+        uses: actions/checkout@v3 # needed for cache
+      - name: set up go
         uses: actions/setup-go@v4
         with:
           go-version: '1.21'
-      - name: Check out code into the Go module directory
-        uses: actions/checkout@v3
-      - name: Build
+          cache: true
+      - name: build
         run: make build
       - name: Copy Files
         run: |
           mkdir artifacts
           cp timeaway artifacts/
-      - name: Archive
+      - name: archive
         uses: actions/upload-artifact@v3
         with:
           name: timeaway-linux-amd64
