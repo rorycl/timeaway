@@ -49,6 +49,7 @@ func Serve(addr string, port string) {
 	// endpoint routing; gorilla mux is used because "/" in http.NewServeMux
 	// is a catch-all pattern
 	r := mux.NewRouter()
+	r.HandleFunc("/", Home)
 	r.HandleFunc("/home", Home)
 	r.HandleFunc("/favicon.ico", Favicon)
 	r.HandleFunc("/trips", Trips)
@@ -236,6 +237,7 @@ func Trips(w http.ResponseWriter, r *http.Request) {
 		errSender("json encoding error: ", err)
 		return
 	}
+	fmt.Println(string(json))
 
 	w.WriteHeader(http.StatusOK)
 	_, err = w.Write(json)

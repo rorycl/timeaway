@@ -29,6 +29,9 @@ COVERAGE_AMT := 60  # should be 80
 build:
 	go test ./... && echo "---ok---" && go build -o timeaway cmd/main.go
 
+build-dev:
+	go test ./... && echo "---ok---" && go build -o timeaway -tags=development cmd/main.go
+
 test:
 	go test ./... -coverprofile=coverage.out
 

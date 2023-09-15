@@ -11,9 +11,9 @@ import (
 // trip is a simple description of a trip with start and end date. The
 // trip struct is also used to describe partial trips for windows.trip
 type trip struct {
-	Start    time.Time `json:"start"`    // start date
-	End      time.Time `json:"end"`      // end date
-	Duration int       `json:"duration"` // duration in days
+	Start    time.Time `json:"Start"`    // start date
+	End      time.Time `json:"End"`      // end date
+	Duration int       `json:"Duration"` // duration in days
 }
 
 // String returns a string representation of a trip

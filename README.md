@@ -1,6 +1,8 @@
 # timeaway
 
-version 0.4.2 : 22 August 2023
+[![go-test](https://github.com/rorycl/timeaway/actions/workflows/gotest.yml/badge.svg?branch=main)](https://github.com/rorycl/timeaway/actions/workflows/gotest.yml)
+
+version 0.4.3 : 15 September 2023
 
 A small web app to calculate if the compound length of trips to Schengen
 countries by non-EU visitors conform with Regulation (EU) No 610/2013
