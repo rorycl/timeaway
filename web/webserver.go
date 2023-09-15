@@ -9,12 +9,9 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"os/signal"
-	"syscall"
 	"text/template"
 	"time"
 
-	"github.com/braintree/manners"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/schema"
@@ -79,19 +76,14 @@ func Serve(addr string, port string) {
 		ReadTimeout:    1 * time.Second,
 		WriteTimeout:   3 * time.Second,
 		MaxHeaderBytes: WebMaxHeaderBytes,
+		Handler:        r,
 	}
 	log.Printf("serving on %s:%s", addr, port)
 
-	// wrap server with manners
-	err := manners.ListenAndServe(addr+":"+port, server.Handler)
+	err := server.ListenAndServe()
 	if err != nil {
 		log.Printf("fatal server error: %v", err)
 	}
-
-	// catch signals
-	ch := make(chan os.Signal, 1)
-	signal.Notify(ch, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
-	go listenForShutdown(ch)
 }
 
 //go:embed tpl/home.html
@@ -251,11 +243,4 @@ func Trips(w http.ResponseWriter, r *http.Request) {
 		log.Printf("could not write trips error %v", err)
 	}
 
-}
-
-// catch shutdown
-func listenForShutdown(ch <-chan os.Signal) {
-	<-ch
-	log.Print("Shutting down the server")
-	manners.Close()
 }
