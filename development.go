@@ -5,6 +5,7 @@ package main
 import "fmt"
 
 func init() {
-	fmt.Println("using InDevelopment = true for development")
+	// set development flag to true, which uses the tpl/home.html file
+	// rather than imbedding it
 	InDevelopment = true
 }
