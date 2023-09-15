@@ -97,6 +97,7 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: timeaway-linux-amd64
+          path: timeaway-linux-amd64
       - name: show download
         run: ls -R
       - name: create release
