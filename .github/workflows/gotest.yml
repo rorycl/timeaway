@@ -43,7 +43,7 @@ jobs:
 
   # https://docs.github.com/en/actions/using-jobs/using-jobs-in-a-workflow#example-not-requiring-successful-dependent-jobs
   golangci:
-    needs: build  # requires test to be successful 
+    needs: test  # requires test to be successful 
     name: lint
     runs-on: ubuntu-latest
     steps:
