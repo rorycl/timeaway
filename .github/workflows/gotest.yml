@@ -14,7 +14,7 @@ permissions:
 
 jobs:
 
-  build:
+  test:
     runs-on: ubuntu-latest
     steps:
       - name: checkout
@@ -24,21 +24,22 @@ jobs:
         with:
           go-version: '1.21'
       - name: test
-        # run: go test -v ./...
-        run: make test
-      - name: coverage check
-        run: make coverage
-      - name: make report
-        run: make report
-      - name: copy files
-        run: |
-          mkdir reports
-          cp cover.html reports/
-      - name: archive
-        uses: actions/upload-artifact@v3
-        with:
-          name: reports
-          path: reports
+        run: go test -v ./...
+        # run: make test
+      # use this option to share coverage reports with team members
+      # - name: coverage check
+      #   run: make coverage
+      # - name: make report
+      #   run: make report
+      # - name: copy files
+      #   run: |
+      #     mkdir reports
+      #     cp cover.html reports/
+      # - name: archive
+      #   uses: actions/upload-artifact@v3
+      #   with:
+      #     name: reports
+      #     path: reports
 
   # https://docs.github.com/en/actions/using-jobs/using-jobs-in-a-workflow#example-not-requiring-successful-dependent-jobs
   golangci:
@@ -79,3 +80,23 @@ jobs:
         with:
           name: timeaway-linux-amd64
           path: artifacts/
+
+  release:
+    name: release
+    needs: build-artifact
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@v3 # needed for cache
+      - name: download binary
+        uses: actions/download-artifact@v2
+        with:
+          name: timaway-linux-amd64
+      - name: create release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/') # only if tagged
+        draft: true
+        body: test workflow release
+        fail_on_unmatched_files: true
+        with:
+          artifacts/timeaway-linux-amd64
