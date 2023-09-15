@@ -98,9 +98,11 @@ jobs:
       - name: show download
         run: ls -R
       - name: create release
-        uses: softprops/action-gh-release@v1
-        # if: startsWith(github.ref, 'refs/tags/') # only if tagged
+        uses: svenstaro/upload-release-action@v2
         with:
-          files: timeaway-linux-amd*
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: timeaway-linux-amd64
+          tag: ${{ github.ref }}
+          overwrite: true
           draft: true
           body: test workflow release
