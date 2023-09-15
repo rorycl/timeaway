@@ -105,6 +105,7 @@ jobs:
           files: timeaway-linux-amd64/timeaway
           draft: true
           body: test workflow release
+          fail_on_unmatched_files: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
