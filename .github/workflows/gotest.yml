@@ -104,4 +104,3 @@ jobs:
           files: timeaway-linux-amd64
           draft: true
           body: test workflow release
-          fail_on_unmatched_files: true
