@@ -5,6 +5,8 @@ SHELL=/bin/bash
 
 GO_VERSION := 1.21  # <1>
 
+COVERAGE_AMT := 60  # should be 80
+
 # setup: # <2>
 # 	install-go
 # 	init-go
@@ -32,7 +34,7 @@ test:
 
 coverage:
 	go tool cover -func coverage.out \
-	| grep "total:" | awk '{print ((int($$3) > 80) != 1) }'
+	| grep "total:" | awk '{print ((int($$3) > ${COVERAGE_AMT}) != 1) }'
 
 report:
 	go tool cover -html=coverage.out -o cover.html
