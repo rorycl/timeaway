@@ -54,16 +54,29 @@ func main() {
 	r.HandleFunc("/favicon.ico", Favicon)
 	r.HandleFunc("/trips", Trips)
 
-	// create a handler wrapped in a recovery handler and logging handler
-	hdl := handlers.RecoveryHandler()(
-		handlers.LoggingHandler(os.Stdout, r))
+	// logging converts gorilla's handlers.CombinedLoggingHandler to a
+	// func(http.Handler) http.Handler to satisfy type MiddlewareFunc
+	logging := func(handler http.Handler) http.Handler {
+		return handlers.CombinedLoggingHandler(os.Stdout, handler)
+	}
+
+	// recovery converts gorilla's handlers.RecoveryHandler to a
+	// func(http.Handler) http.Handler to satisfy type MiddlewareFunc
+	recovery := func(handler http.Handler) http.Handler {
+		return handlers.RecoveryHandler()(handler)
+	}
+
+	// attach middleware
+	r.Use(bodyLimitMiddleware)
+	r.Use(logging)
+	r.Use(recovery)
 
 	// configure server options
 	server := &http.Server{
-		Addr:         options.Addr + ":" + options.Port,
-		ReadTimeout:  1 * time.Second,
-		WriteTimeout: 3 * time.Second,
-		Handler:      hdl,
+		Addr:           options.Addr + ":" + options.Port,
+		ReadTimeout:    1 * time.Second,
+		WriteTimeout:   3 * time.Second,
+		MaxHeaderBytes: 1 << 17, // ~125k
 	}
 	log.Printf("serving on %s:%s", options.Addr, options.Port)
 
