@@ -59,3 +59,6 @@ install-lint:
 	# report version
 	golangci-lint --version
 
+lint:
+	golangci-lint run -v ./...
+
