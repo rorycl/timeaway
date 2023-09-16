@@ -98,8 +98,8 @@ jobs:
         # You can use the upload-artifact and download-artifact actions to share data between jobs in a workflow
         uses: actions/download-artifact@v3
         with:
-          name: artifacts
-          # path: artifacts
+          name: artifacts # remote path
+          path: artifacts # local path
       - name: show download
         run: ls -R
       - name: create release
