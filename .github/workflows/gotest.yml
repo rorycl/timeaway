@@ -88,6 +88,8 @@ jobs:
     # copy the artifact to a release
     # for github workflow variables see https://docs.github.com/en/actions/learn-github-actions/contexts#github-context
     name: release
+    # only run on addition of a tag
+    if: startsWith(github.ref, 'refs/tags/v')
     needs: build-artifact
     runs-on: ubuntu-latest
     steps:
