@@ -98,15 +98,15 @@ jobs:
         # You can use the upload-artifact and download-artifact actions to share data between jobs in a workflow
         uses: actions/download-artifact@v3
         with:
-          name: timeaway-linux-amd64
-          path: downloads/timeaway-linux-amd64
+          name: artifacts
+          # path: artifacts
       - name: show download
         run: ls -R
       - name: create release
         uses: softprops/action-gh-release@v1 
         # if: startsWith(github.ref, 'refs/tags/') # only if tagged 
         with:
-          files: downloads/timeaway-linux-amd64
+          files: artifacts/timeaway-linux-amd64
           draft: true
           name: Release for ${{ github.ref_name }} (automated draft)
           body: |
