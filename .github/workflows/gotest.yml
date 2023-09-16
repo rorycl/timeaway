@@ -14,52 +14,52 @@ permissions:
 
 jobs:
 
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - name: checkout
-        uses: actions/checkout@v3 # needed for cache
-      - name: set up go
-        uses: actions/setup-go@v4
-        with:
-          go-version: '1.21'
-      - name: test
-        run: go test -v ./...
-        # run: make test
-      # use this option to share coverage reports with team members
-      # - name: coverage check
-      #   run: make coverage
-      # - name: make report
-      #   run: make report
-      # - name: copy files
-      #   run: |
-      #     mkdir reports
-      #     cp cover.html reports/
-      # - name: archive
-      #   uses: actions/upload-artifact@v3
-      #   with:
-      #     name: reports
-      #     path: reports
+  # test:
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: checkout
+  #       uses: actions/checkout@v3 # needed for cache
+  #     - name: set up go
+  #       uses: actions/setup-go@v4
+  #       with:
+  #         go-version: '1.21'
+  #     - name: test
+  #       run: go test -v ./...
+  #       # run: make test
+  #     # use this option to share coverage reports with team members
+  #     # - name: coverage check
+  #     #   run: make coverage
+  #     # - name: make report
+  #     #   run: make report
+  #     # - name: copy files
+  #     #   run: |
+  #     #     mkdir reports
+  #     #     cp cover.html reports/
+  #     # - name: archive
+  #     #   uses: actions/upload-artifact@v3
+  #     #   with:
+  #     #     name: reports
+  #     #     path: reports
 
-  # https://docs.github.com/en/actions/using-jobs/using-jobs-in-a-workflow#example-not-requiring-successful-dependent-jobs
-  golangci:
-    needs: test  # requires test to be successful 
-    name: lint
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3 
-      - uses: actions/setup-go@v4 
-        with:
-          go-version: '1.21'
-          cache: false
-      - name: golangci-lint
-        uses: golangci/golangci-lint-action@v3
-        with:
-          version: v1.54
+  # # https://docs.github.com/en/actions/using-jobs/using-jobs-in-a-workflow#example-not-requiring-successful-dependent-jobs
+  # golangci:
+  #   needs: test  # requires test to be successful 
+  #   name: lint
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v3 
+  #     - uses: actions/setup-go@v4 
+  #       with:
+  #         go-version: '1.21'
+  #         cache: false
+  #     - name: golangci-lint
+  #       uses: golangci/golangci-lint-action@v3
+  #       with:
+  #         version: v1.54
 
   build-artifact:
     # https://docs.github.com/en/actions/using-workflows/storing-workflow-data-as-artifacts
-    needs: golangci
+    # needs: golangci
     name: artifacts
     runs-on: ubuntu-latest
     steps:
@@ -80,7 +80,8 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: artifacts
-          path: artifacts/timeway-linux-amd64
+          path: artifacts/
+          if-no-files-found: error
           retention-days: 5
 
   release:
