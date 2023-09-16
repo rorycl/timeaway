@@ -5,11 +5,13 @@ name: go-test
 
 on:
   push:
-    branches: [ "main" ]
+    branches:
+      - main
+    tags:
+      - v*
   pull_request:
-    branches: [ "main" ]
-  tags:
-    - v*
+    branches:
+      - main
 
 permissions:
   contents: write
