@@ -80,7 +80,6 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: timeaway-linux-amd64
-          path: artifacts/timeaway-linux-amd64
           retention-days: 5
 
   release:
