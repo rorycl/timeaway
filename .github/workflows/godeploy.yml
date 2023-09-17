@@ -31,11 +31,13 @@ jobs:
       - name: show checkout
         run: ls -R
       - id: auth
+        name: auth
         uses: 'google-github-actions/auth@v1'
         with:
           # service_account: ${{ secrets.gcp_service_account }}
           credentials_json: ${{ secrets.gcp_credentials }}
-      - name: deploy
+      - id : deploy
+        name: deploy
         uses: google-github-actions/deploy-cloud-functions@main
         with:
           name: timeaway
@@ -46,5 +48,5 @@ jobs:
       - name: echo output
         run: echo ${{ steps.deploy.outputs.url }}
       - id: test
-        run: curl -s "${{ steps.deploy.outputs.url }}/" > /dev/null
+        run: 'curl "${{ steps.deploy.outputs.url }}/"'
 
