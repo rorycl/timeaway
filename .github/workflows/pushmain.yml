@@ -18,11 +18,11 @@ jobs:
 
   # use the test workflow
   test:
-    uses: '.github/workflows/test-component.yml'
+    uses: './.github/workflows/test-component.yml'
 
   lint:
-    uses: '.github/workflows/lint-component.yml'
+    uses: './.github/workflows/lint-component.yml'
 
   artifacts:
-    uses: '.github/workflows/artifact-component.yml'
+    uses: './.github/workflows/artifact-component.yml'
 
