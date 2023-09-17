@@ -1,6 +1,6 @@
 # timeaway
 
-[![go-test](https://github.com/rorycl/timeaway/actions/workflows/gotest.yml/badge.svg?branch=main)](https://github.com/rorycl/timeaway/actions/workflows/gotest.yml)
+[![CI/CD](https://github.com/rorycl/timeaway/actions/workflows/pushtag.yml/badge.svg)](https://github.com/rorycl/timeaway/actions/workflows/pushtag.yml)
 
 version v0.4.14 : 17 September 2023
 
