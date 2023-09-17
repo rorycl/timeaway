@@ -5,9 +5,10 @@
 name: test, lint, release and deploy
 
 on:
+  # https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#onpushbranchestagsbranches-ignoretags-ignore
   push:
-    branches:
-      - main
+    # branches:
+    #   - main
     tags:
       - v*
 
