@@ -12,6 +12,50 @@ import (
 	"testing"
 )
 
+// Test Home page returns a 200
+func TestHome(t *testing.T) {
+
+	r := httptest.NewRequest(http.MethodGet, "http://example.com/home", nil)
+	w := httptest.NewRecorder()
+
+	Home(w, r)
+
+	res := w.Result()
+	defer res.Body.Close()
+	_, err := io.ReadAll(res.Body)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if want, got := 200, res.StatusCode; want != got {
+		t.Errorf("expected status %d, got %d", want, got)
+	}
+}
+
+// Test Health page returns a 200
+func TestHealth(t *testing.T) {
+
+	r := httptest.NewRequest(http.MethodGet, "http://example.com/health", nil)
+	w := httptest.NewRecorder()
+
+	Health(w, r)
+
+	res := w.Result()
+	defer res.Body.Close()
+	data, err := io.ReadAll(res.Body)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if want, got := 200, res.StatusCode; want != got {
+		t.Errorf("expected status %d, got %d", want, got)
+	}
+	responseBody := string(data)
+	if want, got := strings.TrimSpace(`{"status":"up"}`), strings.TrimSpace(responseBody); want != got {
+		t.Errorf("expected status %s, got %s", want, got)
+	}
+}
+
 func TestTripsEndpoint(t *testing.T) {
 
 	// http.HandleFunc("/trips", Trips)

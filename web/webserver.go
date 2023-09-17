@@ -53,6 +53,7 @@ func Serve(addr string, port string) {
 	r.HandleFunc("/home", Home)
 	r.HandleFunc("/favicon.ico", Favicon)
 	r.HandleFunc("/trips", Trips)
+	r.HandleFunc("/health", Health)
 
 	// logging converts gorilla's handlers.CombinedLoggingHandler to a
 	// func(http.Handler) http.Handler to satisfy type MiddlewareFunc
@@ -245,4 +246,14 @@ func Trips(w http.ResponseWriter, r *http.Request) {
 		log.Printf("could not write trips error %v", err)
 	}
 
+}
+
+// HealthCheck shows if the service is up
+func Health(w http.ResponseWriter, r *http.Request) {
+	enc := json.NewEncoder(w)
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	resp := map[string]string{"status": "up"}
+	if err := enc.Encode(resp); err != nil {
+		log.Fatal("unable to encode response")
+	}
 }
