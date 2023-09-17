@@ -1,7 +1,7 @@
 # For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-go
 # This re-usable component makes artifacts
 
-name: create artifacts
+name: artifacts-component
 
 on:
   workflow_call:
@@ -13,7 +13,7 @@ jobs:
 
   build-artifact:
     # https://docs.github.com/en/actions/using-workflows/storing-workflow-data-as-artifacts
-    name: artifacts
+    name: artifacts-component
     runs-on: ubuntu-latest
     steps:
       - name: checkout
