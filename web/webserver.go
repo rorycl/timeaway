@@ -31,6 +31,9 @@ var ServerAddress string = "127.0.0.1"
 // ServerPort is the default Server network port
 var ServerPort string = "8000"
 
+// BaseURL is the base url for redirects, etc.
+var BaseURL string = ""
+
 // Serve runs the web server on the specified address and port
 func Serve(addr string, port string) {
 
@@ -147,7 +150,7 @@ func Home(w http.ResponseWriter, r *http.Request) {
 		"trip calculator",
 		ServerAddress,
 		ServerPort,
-		"/trips",
+		BaseURL + "/trips",
 		inputDates,
 	}
 	err := t.Execute(w, data)

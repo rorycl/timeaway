@@ -46,7 +46,7 @@ jobs:
           runtime: go121
           # credentials: ${{ secrets.gcp_credentials }}
       - name: echo output
-        run: echo ${{ steps.deploy.outputs.url }}
+        run: 'echo "${{ steps.deploy.outputs.url }}"'
       - id: test
-        run: 'curl "${{ steps.deploy.outputs.url }}/"'
+        run: 'curl "${{ steps.deploy.outputs.url }}/" | head -n 10'
 
