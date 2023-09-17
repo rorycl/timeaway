@@ -34,7 +34,7 @@ jobs:
     name: release
     # only run on addition of a tag
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: build-artifact
+    needs: artifacts
     runs-on: ubuntu-latest
     steps:
       - name: checkout
@@ -67,7 +67,7 @@ jobs:
   deploy:
     name: deploy faas
     runs-on: ubuntu-latest
-    needs: build-artifact
+    needs: artifacts
     # if ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
     steps:
       - name: checkout
