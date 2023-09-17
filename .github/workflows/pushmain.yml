@@ -21,8 +21,10 @@ jobs:
     uses: './.github/workflows/test-component.yml'
 
   lint:
+    needs: test  # requires test to be successful 
     uses: './.github/workflows/lint-component.yml'
 
   artifacts:
+    needs: lint # requires lint to be successful 
     uses: './.github/workflows/artifact-component.yml'
 

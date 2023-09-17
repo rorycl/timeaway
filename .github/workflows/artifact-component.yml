@@ -13,7 +13,6 @@ jobs:
 
   build-artifact:
     # https://docs.github.com/en/actions/using-workflows/storing-workflow-data-as-artifacts
-    needs: golangci
     name: artifacts
     runs-on: ubuntu-latest
     steps:
