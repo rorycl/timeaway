@@ -136,13 +136,19 @@ jobs:
           fetch-depth: 0
       - name: show checkout
         run: ls -R
+      - id: auth
+        uses: 'google-github-actions/auth@v1'
+        with:
+          # service_account: ${{ secrets.gcp_service_account }}
+          credentials_json: ${{ secrets.gcp_credentials }}
       - name: deploy
         uses: google-github-actions/deploy-cloud-functions@main
         with:
           name: timeaway
           entry_point: GCPServer
+          project_id: github-timeaway-399312
           runtime: go121
-          credentials: ${{ secrets.gcp_credentials }}
+          # credentials: ${{ secrets.gcp_credentials }}
       - name: echo output
         run: echo ${{ steps.deploy.outputs }}
       - id: test
