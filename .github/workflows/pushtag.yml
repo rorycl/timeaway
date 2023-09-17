@@ -1,12 +1,13 @@
-# This workflow will build a golang project
+# This workflow will test a golang project, make artifacts, make a
+# releaes and deploy to GCP FaaS
 # For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-go
 
-name: go-test
+name: test, lint, release and deploy
 
 on:
-  # push:
-  #   branches:
-  #     - main
+  push:
+    branches:
+      - main
     tags:
       - v*
   # pull_request:
@@ -19,74 +20,13 @@ permissions:
 jobs:
 
   test:
-    runs-on: ubuntu-latest
-    steps:
-      - name: checkout
-        uses: actions/checkout@v3 # needed for cache
-      - name: set up go
-        uses: actions/setup-go@v4
-        with:
-          go-version: '1.21'
-      - name: test
-        run: go test -v ./...
-        # run: make test
-      # use this option to share coverage reports with team members
-      # - name: coverage check
-      #   run: make coverage
-      # - name: make report
-      #   run: make report
-      # - name: copy files
-      #   run: |
-      #     mkdir reports
-      #     cp cover.html reports/
-      # - name: archive
-      #   uses: actions/upload-artifact@v3
-      #   with:
-      #     name: reports
-      #     path: reports
+    uses: '.github/workflows/test-component.yml'
 
-  # https://docs.github.com/en/actions/using-jobs/using-jobs-in-a-workflow#example-not-requiring-successful-dependent-jobs
-  golangci:
-    needs: test  # requires test to be successful 
-    name: lint
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3 
-      - uses: actions/setup-go@v4 
-        with:
-          go-version: '1.21'
-          cache: false
-      - name: golangci-lint
-        uses: golangci/golangci-lint-action@v3
-        with:
-          version: v1.54
+  lint:
+    uses: '.github/workflows/lint-component.yml'
 
-  build-artifact:
-    # https://docs.github.com/en/actions/using-workflows/storing-workflow-data-as-artifacts
-    needs: golangci
-    name: artifacts
-    runs-on: ubuntu-latest
-    steps:
-      - name: checkout
-        uses: actions/checkout@v3 # needed for cache
-      - name: set up go
-        uses: actions/setup-go@v4
-        with:
-          go-version: '1.21'
-          cache: true
-      - name: build
-        run: make build
-      - name: Copy Files
-        run: |
-          mkdir artifacts
-          cp timeaway artifacts/timeaway-linux-amd64
-      - name: archive
-        uses: actions/upload-artifact@v3
-        with:
-          name: artifacts
-          path: artifacts/
-          if-no-files-found: error
-          retention-days: 5
+  artifacts:
+    uses: '.github/workflows/artifact-component.yml'
 
   release:
     # copy the artifact to a release
@@ -124,7 +64,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  deploy-function:
+  deploy:
     name: deploy faas
     runs-on: ubuntu-latest
     needs: build-artifact
@@ -137,11 +77,13 @@ jobs:
       - name: show checkout
         run: ls -R
       - id: auth
+        name: auth
         uses: 'google-github-actions/auth@v1'
         with:
           # service_account: ${{ secrets.gcp_service_account }}
           credentials_json: ${{ secrets.gcp_credentials }}
-      - name: deploy
+      - id : deploy
+        name: deploy
         uses: google-github-actions/deploy-cloud-functions@main
         with:
           name: timeaway
@@ -150,7 +92,7 @@ jobs:
           runtime: go121
           # credentials: ${{ secrets.gcp_credentials }}
       - name: echo output
-        run: echo ${{ steps.deploy.outputs }}
+        run: 'echo "${{ steps.deploy.outputs.url }}"'
       - id: test
-        run: curl "${{ steps.deploy.outputs.url }}/"
+        run: 'curl "${{ steps.deploy.outputs.url }}/" | head -n 10'
 

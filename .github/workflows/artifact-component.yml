@@ -1,0 +1,39 @@
+# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-go
+# This re-usable component makes artifacts
+
+name: create artifacts
+
+on:
+  workflow_call:
+
+permissions:
+  contents: write
+
+jobs:
+
+  build-artifact:
+    # https://docs.github.com/en/actions/using-workflows/storing-workflow-data-as-artifacts
+    needs: golangci
+    name: artifacts
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@v3 # needed for cache
+      - name: set up go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.21'
+          cache: true
+      - name: build
+        run: make build
+      - name: Copy Files
+        run: |
+          mkdir artifacts
+          cp timeaway artifacts/timeaway-linux-amd64
+      - name: archive
+        uses: actions/upload-artifact@v3
+        with:
+          name: artifacts
+          path: artifacts/
+          if-no-files-found: error
+          retention-days: 5
