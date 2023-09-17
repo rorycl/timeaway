@@ -2,7 +2,7 @@
 
 [![go-test](https://github.com/rorycl/timeaway/actions/workflows/gotest.yml/badge.svg?branch=main)](https://github.com/rorycl/timeaway/actions/workflows/gotest.yml)
 
-version v0.4.13 : 16 September 2023
+version v0.4.14 : 17 September 2023
 
 A small web app to calculate if the compound length of trips to Schengen
 countries by non-EU visitors conform with Regulation (EU) No 610/2013
