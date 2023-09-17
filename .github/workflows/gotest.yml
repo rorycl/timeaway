@@ -4,9 +4,9 @@
 name: go-test
 
 on:
-  push:
-    branches:
-      - main
+  # push:
+  #   branches:
+  #     - main
     tags:
       - v*
   # pull_request:
