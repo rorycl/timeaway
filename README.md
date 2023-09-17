@@ -2,20 +2,25 @@
 
 [![go-test](https://github.com/rorycl/timeaway/actions/workflows/gotest.yml/badge.svg?branch=main)](https://github.com/rorycl/timeaway/actions/workflows/gotest.yml)
 
-version 0.4.9 : 16 September 2023
+version v0.4.13 : 16 September 2023
 
 A small web app to calculate if the compound length of trips to Schengen
 countries by non-EU visitors conform with Regulation (EU) No 610/2013
 limiting the total length of stays to no more than 90 days in any 180
 day window.
 
+(This app has also turned into a github actions/workflows experiment
+inspired by the book "[Shipping
+Go](https://www.manning.com/books/shipping-go)" by Joel Holmes, and
+which partly accounts for large number of commits and releases.)
+
 The `trips` go module provides the means for calculation.
 
 The provided web app provides a convenient interface for making
-calculations at the `/home` endpoint. This endpoint can also receive
-pairs of Start and End parameters for each trip, and sets the url
-parameters each time a calculation is made, allowing calculations to be
-conveniently saved or bookmarked.
+calculations at the `/` or `/home` endpoint. This endpoint can also
+receive pairs of Start and End parameters for each trip, and sets the
+url parameters each time a calculation is made, allowing calculations to
+be conveniently saved or bookmarked.
 
 The calculation method uses a 180 day moving window to calculate the
 longest compound trip length (`windowDaysAway`). Where more than one
@@ -61,6 +66,6 @@ gives the following output, assuming the server is running on `127.0.0.1:8080/`:
 
 ![](util/example.gif)
 
-## License
+## Licence
 
 This project is licensed under the [MIT Licence](LICENCE).

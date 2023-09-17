@@ -39,7 +39,7 @@ coverage:
 	go tool cover -func coverage.out \
 	| grep "total:" | awk '{print ((int($$3) > ${COVERAGE_AMT}) != 1) }'
 
-report:
+cover-report:
 	go tool cover -html=coverage.out -o cover.html
 
 clean:
