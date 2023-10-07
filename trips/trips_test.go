@@ -1,45 +1,44 @@
 package trips
 
 import (
-	"log"
+	"encoding/json"
 	"testing"
 )
-
-// holiday describes the start and end dates for a holiday in string
-// format (using 2006-01-02 format)
-type holiday struct {
-	start string
-	end   string
-}
 
 // overlap detection checks
 func TestTripAdditions(t *testing.T) {
 
-	window := 5
-	compoundStayMaxLength := 3
+	WindowMaxDays = 5
+	CompoundStayMaxDays = 3
 
-	trips, err := NewTrips(window, compoundStayMaxLength)
+	trips, err := newTrips()
 	if err != nil {
 		t.Fatalf("could not make trips %v", err)
 	}
 
+	tp := func(s, e string) Holiday {
+		h, err := newHolidayFromStr(s, e)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return *h
+	}
+
 	type holidayTest struct {
-		start string
-		end   string
-		err   bool
-		msg   string
+		hol Holiday
+		err bool
+		msg string
 	}
 	for i, h := range []holidayTest{
-		holidayTest{"2023-01-01", "2023-01-01", false, "simple add"},
-		holidayTest{"2023-01-01", "2023-01-07", true, "overlap already registered date"},
-		holidayTest{"2023-01-02", "2023-01-04", false, "simple add again"},
-		holidayTest{"2023-01-03", "2023-01-05", true, "overlap two days"},
-		holidayTest{"2023-01-04", "2023-01-05", true, "overlap one day"},
-		holidayTest{"2022-12-31", "2023-01-01", true, "overlap first day"},
-		holidayTest{"2022-12-31", "2022-12-30", true, "end before start"},
-		holidayTest{"2022-11-01", "2022-11-02", false, "add before first should be ok"},
+		{tp("2023-01-01", "2023-01-01"), false, "simple add"},
+		{tp("2023-01-01", "2023-01-07"), true, "overlap already registered date"},
+		{tp("2023-01-02", "2023-01-04"), false, "simple add again"},
+		{tp("2023-01-03", "2023-01-05"), true, "overlap two days"},
+		{tp("2023-01-04", "2023-01-05"), true, "overlap one day"},
+		{tp("2022-12-31", "2023-01-01"), true, "overlap first day"},
+		{tp("2022-11-01", "2022-11-02"), false, "add before first should be ok"},
 	} {
-		err = trips.AddTrip(h.start, h.end)
+		err = trips.addHoliday(h.hol)
 		if (err != nil && !h.err) || (err == nil && h.err) {
 			t.Errorf("addtrip error for test %d : %v", i, h)
 		}
@@ -53,191 +52,186 @@ func TestTripAdditions(t *testing.T) {
 //	1    2    3         4       <- max stay
 func TestTrips(t *testing.T) {
 
-	window := 5
-	compoundStayMaxLength := 4
-	resultsNo := 4
+	WindowMaxDays = 5
+	CompoundStayMaxDays = 4
 
-	trips, err := NewTrips(window, compoundStayMaxLength)
+	trips, err := newTrips()
 	if err != nil {
 		t.Fatalf("could not make trips %v", err)
 	}
 
-	for i, h := range []holiday{
-		holiday{"2023-01-01", "2023-01-01"},
-		holiday{"2023-01-06", "2023-01-07"},
-		holiday{"2023-01-11", "2023-01-12"},
-		holiday{"2023-01-15", "2023-01-15"},
-		holiday{"2023-01-21", "2023-01-22"},
-		holiday{"2023-01-24", "2023-01-25"},
-	} {
-		err = trips.AddTrip(h.start, h.end)
+	tp := func(s, e string) Holiday {
+		h, err := newHolidayFromStr(s, e)
 		if err != nil {
-			t.Fatalf("error making holiday %d %v %v", i, h, err)
+			t.Fatal(err)
 		}
+		return *h
 	}
 
-	err = trips.Calculate()
+	hols := []Holiday{
+		tp("2023-01-01", "2023-01-01"),
+		tp("2023-01-06", "2023-01-07"),
+		tp("2023-01-11", "2023-01-12"),
+		tp("2023-01-15", "2023-01-15"),
+		tp("2023-01-21", "2023-01-22"),
+		tp("2023-01-24", "2023-01-25"),
+	}
+
+	trips, err = Calculate(hols)
 	if err != nil {
 		t.Fatalf("calculation error %v", err)
 	}
-
 	t.Log(trips)
 
-	breach, _ := trips.LongestTrips(resultsNo)
-
-	if trips.longestStay != 4 {
-		t.Errorf("Expected longest stay to be 4, got %d", trips.longestStay)
+	if trips.DaysAway != 4 {
+		t.Errorf("Expected longest stay to be 4, got %d", trips.DaysAway)
 	}
 
-	if breach != false {
+	if trips.Breach != false {
 		t.Error("Expected breach to be false, got true")
 	}
 
-	// get json result
-	jsonResult, err := trips.AsJSON()
+	if got, want := len(trips.Window.HolidayParts), 2; got != want {
+		t.Errorf("partial trips should be %d, got %d", got, want)
+	}
+
+	jsonResult, err := json.Marshal(trips)
 	if err != nil {
 		t.Fatalf("json reading error %v\n", err)
 	}
 
 	// unmarshal back to struct
-	check, err := UnmarshalTripsJSON(jsonResult)
+	var checkTrips Trips
+	err = json.Unmarshal(jsonResult, &checkTrips)
 	if err != nil {
 		t.Fatalf("unmarshal error %v", err)
 	}
 
-	// t.Logf("tripsjson %+v\n", check)
-
-	if check.Breach != false {
-		t.Errorf("breach should be false, got %v", check.Breach)
-	}
-	if check.DaysAway != trips.longestStay {
-		t.Errorf("window days away should be %v got %v", trips.longestStay, check.DaysAway)
+	if checkTrips.Breach != false {
+		t.Errorf("breach should be false, got %v", checkTrips.Breach)
 	}
 
-	if len(check.PartialTrips) != 2 {
-		t.Errorf("partial trips should be 2, got %d", len(check.PartialTrips))
+	if got, want := checkTrips.DaysAway, trips.DaysAway; got != want {
+		t.Errorf("window days away should be %v got %v", got, want)
 	}
 
-	if len(check.Holidays) != 6 {
-		t.Errorf("holiday trips should be 6, got %d", len(check.Holidays))
+	if len(checkTrips.Window.HolidayParts) != 2 {
+		t.Errorf("partial trips should be 2, got %d", len(checkTrips.Window.HolidayParts))
+	}
+
+	if len(checkTrips.Holidays) != 6 {
+		t.Errorf("holiday trips should be 6, got %d", len(checkTrips.Holidays))
 	}
 
 }
 
-// the same test as above, but with a lower compoundStayMaxLength to
+// the same test as above, but with a lower CompoundStayMaxDays to
 // breach
 func TestTripsToBreach(t *testing.T) {
 
-	window := 5
-	compoundStayMaxLength := 3
-	resultsNo := 4
+	WindowMaxDays = 5
+	CompoundStayMaxDays = 3
 
-	trips, err := NewTrips(window, compoundStayMaxLength)
-	if err != nil {
-		t.Fatalf("could not make trips %v", err)
-	}
-
-	for i, h := range []holiday{
-		holiday{"2023-01-01", "2023-01-01"},
-		holiday{"2023-01-06", "2023-01-07"},
-		holiday{"2023-01-11", "2023-01-12"},
-		holiday{"2023-01-15", "2023-01-15"},
-		holiday{"2023-01-21", "2023-01-22"},
-		holiday{"2023-01-24", "2023-01-25"},
-	} {
-		err = trips.AddTrip(h.start, h.end)
+	tp := func(s, e string) Holiday {
+		h, err := newHolidayFromStr(s, e)
 		if err != nil {
-			t.Fatalf("error making holiday %d %v %v", i, h, err)
+			t.Fatal(err)
 		}
+		return *h
 	}
 
-	err = trips.Calculate()
+	hols := []Holiday{
+		tp("2023-01-01", "2023-01-01"),
+		tp("2023-01-06", "2023-01-07"),
+		tp("2023-01-11", "2023-01-12"),
+		tp("2023-01-15", "2023-01-15"),
+		tp("2023-01-21", "2023-01-22"),
+		tp("2023-01-24", "2023-01-25"),
+	}
+
+	trips, err := Calculate(hols)
 	if err != nil {
 		t.Fatalf("calculation error %v", err)
 	}
+	t.Log(trips)
 
-	breach, windows := trips.LongestTrips(resultsNo)
-	for i, w := range windows {
-		t.Logf("%d : %+v\n", i, w)
+	if trips.DaysAway != 4 {
+		t.Errorf("Expected longest stay to be 4, got %d", trips.DaysAway)
 	}
-
-	if trips.longestStay != 4 {
-		t.Errorf("Expected longest stay to be 4, got %d", trips.longestStay)
-	}
-
-	if breach != true {
+	if trips.Breach != true {
 		t.Error("Expected breach to be true, got false")
 	}
 
-	// jsoncheck
-	jsonResult, err := trips.AsJSON()
+	jsonResult, err := json.Marshal(trips)
 	if err != nil {
-		t.Errorf("json reading error %v\n", err)
+		t.Fatalf("json reading error %v\n", err)
 	}
 
 	// unmarshal back to struct
-	check, err := UnmarshalTripsJSON(jsonResult)
+	var checkTrips Trips
+	err = json.Unmarshal(jsonResult, &checkTrips)
 	if err != nil {
 		t.Fatalf("unmarshal error %v", err)
 	}
 
-	// t.Logf("tripsjson %+v\n", check)
-
-	if check.Breach != true {
-		t.Errorf("breach should be true , got %v", check.Breach)
-	}
-	if check.DaysAway != trips.longestStay {
-		t.Errorf("window days away should be %v got %v", trips.longestStay, check.DaysAway)
+	if checkTrips.Breach != true {
+		t.Errorf("breach should be true , got %v", checkTrips.Breach)
 	}
 
-	if len(check.PartialTrips) != 2 {
-		t.Errorf("partial trips should be 2, got %d", len(check.PartialTrips))
+	if checkTrips.DaysAway != trips.DaysAway {
+		t.Errorf("window days away should be %v got %v", trips.DaysAway, checkTrips.DaysAway)
 	}
 
-	if len(check.Holidays) != 6 {
-		t.Errorf("holiday trips should be 6, got %d", len(check.Holidays))
+	if len(checkTrips.Window.HolidayParts) != 2 {
+		t.Errorf("partial trips should be 2, got %d", len(checkTrips.Window.HolidayParts))
+	}
+
+	if len(checkTrips.Holidays) != 6 {
+		t.Errorf("holiday trips should be 6, got %d", len(checkTrips.Holidays))
 	}
 
 }
 
 func TestTripsLonger(t *testing.T) {
 
-	trips, err := NewTrips(40, 35)
+	WindowMaxDays = 40
+	CompoundStayMaxDays = 35
+
+	trips, err := newTrips()
 	if err != nil {
 		t.Fatalf("could not make trips %v", err)
 	}
 
-	err = trips.AddTrip("2023-02-01", "2023-02-28")
+	adder := func(s, e string) error {
+		h, err := newHolidayFromStr(s, e)
+		if err != nil {
+			t.Fatal(s, e, err)
+		}
+		return trips.addHoliday(*h)
+	}
+
+	err = adder("2023-02-01", "2023-02-28")
 	if err != nil {
 		t.Fatalf("1. unexpected error making holiday %v", err)
 	}
 
-	err = trips.AddTrip("2023-04-02", "2023-05-10")
+	err = adder("2023-04-02", "2023-05-10")
 	if err != nil {
 		t.Fatalf("2. unexpected error making holiday %v", err)
 	}
 
-	err = trips.AddTrip("2022-04-02", "2022-04-01")
-	if err == nil {
-		t.Fatal("should error with overlapping dates")
-	}
-
-	err = trips.Calculate()
+	// call to package internal calculate
+	tps, err := trips.calculate()
 	if err != nil {
 		t.Fatalf("calculation error %v", err)
 	}
 
-	breach, windows := trips.LongestTrips(5)
-	for i, w := range windows {
-		t.Logf("%d : %+v\n", i, w)
-	}
-
 	// start 2023-04-02 end 2023-05-10 is 39 days inclusive
-	if trips.longestStay != 39 {
-		t.Errorf("Expected longest stay to be 39, got %d", trips.longestStay)
+	if tps.DaysAway != 39 {
+		t.Errorf("Expected longest stay to be 39, got %d", trips.DaysAway)
 	}
 
-	if breach != true {
+	if tps.Breach != true {
 		t.Error("Expected breach to be true, got false")
 	}
 }
@@ -245,50 +239,52 @@ func TestTripsLonger(t *testing.T) {
 // test performance over a much larger window and larger stay size
 func TestTripsLong(t *testing.T) {
 
-	window := 720
-	compoundStayMaxLength := 180
-	resultsNo := 3
+	WindowMaxDays = 720
+	CompoundStayMaxDays = 180
 
-	trips, err := NewTrips(window, compoundStayMaxLength)
+	trips, err := newTrips()
 	if err != nil {
 		t.Fatalf("could not make trips %v", err)
 	}
 
-	for i, h := range []holiday{
-		holiday{"2020-01-01", "2020-02-01"},
-		holiday{"2021-03-01", "2021-05-01"},
-		holiday{"2023-07-11", "2023-07-12"},
-		holiday{"2023-09-01", "2023-11-01"},
-		holiday{"2024-01-01", "2024-03-25"},
-		holiday{"2024-05-01", "2024-06-01"},
-		holiday{"2028-01-01", "2028-01-01"},
+	tp := func(s, e string) Holiday {
+		h, err := newHolidayFromStr(s, e)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return *h
+	}
+
+	for i, h := range []Holiday{
+		tp("2020-01-01", "2020-02-01"),
+		tp("2021-03-01", "2021-05-01"),
+		tp("2023-07-11", "2023-07-12"),
+		tp("2023-09-01", "2023-11-01"),
+		tp("2024-01-01", "2024-03-25"),
+		tp("2024-05-01", "2024-06-01"),
+		tp("2028-01-01", "2028-01-01"),
 	} {
-		err = trips.AddTrip(h.start, h.end)
+		err = trips.addHoliday(h)
 		if err != nil {
 			t.Fatalf("error making holiday %d %v %v", i, h, err)
 		}
 	}
 
-	err = trips.Calculate()
+	_, err = trips.calculate()
 	if err != nil {
 		t.Fatalf("calculation error %v", err)
 	}
 
-	breach, windows := trips.LongestTrips(resultsNo)
-	for i, w := range windows {
-		log.Printf("%d : %+v\n", i, w)
-	}
-
-	if breach != true {
+	if trips.Breach != true {
 		t.Error("expected breach to be true")
 	}
 
-	if trips.longestStay != 181 {
-		t.Errorf("Expected longest stay to be 181, got %d", trips.longestStay)
+	if trips.DaysAway != 181 {
+		t.Errorf("Expected longest stay to be 181, got %d", trips.DaysAway)
 	}
 
-	if len(trips.trips) != 7 {
-		t.Errorf("holiday trips should be 7, got %d", len(trips.trips))
+	if len(trips.Holidays) != 7 {
+		t.Errorf("holiday trips should be 7, got %d", len(trips.Holidays))
 	}
 
 }

@@ -3,195 +3,139 @@ package trips
 import (
 	"errors"
 	"fmt"
-	"sort"
 	"strings"
 	"time"
 )
 
-// trip is a simple description of a trip with start and end date. The
-// trip struct is also used to describe partial trips for windows.trip
-type trip struct {
-	Start    time.Time `json:"Start"`    // start date
-	End      time.Time `json:"End"`      // end date
-	Duration int       `json:"Duration"` // duration in days
-}
-
-// String returns a string representation of a trip
-func (t trip) String() string {
-	return fmt.Sprintf(
-		"%s to %s", DayFmt(t.Start), DayFmt(t.End),
-	)
-}
-
-// days returns the number of inclusive days between the start and end
-// dates of a trip
-func (t trip) Days() int {
-	days := 0
-	for d := t.Start; !d.After(t.End); d = d.Add(durationDays(1)) {
-		days++
-	}
-	return days
-}
-
-// overlap returns a pointer to a partial or full trip if there is an
-// overlap with the provided dates, else a nil pointer
-func (t trip) overlaps(start, end time.Time) *trip {
-	partialTrip := trip{}
-	// no overlap
-	if t.Start.After(end) || t.End.Before(start) {
-		return nil
-	}
-	// contained
-	if t.Start.After(start) && t.End.Before(end) {
-		partialTrip.Start = t.Start
-		partialTrip.End = t.End
-		return &partialTrip
-	}
-	// partial overlap
-	if t.Start.Before(start) || t.Start == start {
-		partialTrip.Start = start
-	} else {
-		partialTrip.Start = t.Start
-	}
-	if t.End.After(end) || t.End == end {
-		partialTrip.End = end
-	} else {
-		partialTrip.End = t.End
-	}
-	return &partialTrip
-}
-
-// window stores the results of a calculation window
-type window struct {
-	Start     time.Time
-	End       time.Time
-	TripParts []trip // parts of any overlapping trips
-	DaysAway  int    // days away for this window
-}
-
-// String returns a printable version of a window
-func (w window) String() string {
-	tpl := `%s : %s (%d)`
-	s := fmt.Sprintf(
-		tpl, DayFmt(w.Start), DayFmt(w.End), w.DaysAway,
-	)
-	for _, t := range w.TripParts {
-		s = s + fmt.Sprintf(" %s", t)
-	}
-	return s
-}
+var (
+	// WindowMaxDays maximum window of days to calculate over
+	WindowMaxDays int = 180
+	// CompoundStayMaxDays is the longest allowed compound trip length
+	CompoundStayMaxDays int = 90
+)
 
 // Trips describe a set of trips and other metadata
 type Trips struct {
-	window      int       // window of days to search over
-	maxStay     int       // the maximum length of trips in window
-	startFrame  time.Time // date at which to start calculating windows
-	endFrame    time.Time // date at which to stop calculating windows
-	longestStay int       // the longest compound stay in days
-	trips       []trip
-	windows     []window
-	breach      bool
+	windowSize int       // size of window of days to search over
+	maxStay    int       // the maximum length of trips in window
+	startFrame time.Time // date at which to start calculating windows
+	endFrame   time.Time // date at which to stop calculating windows
+	windows    []window  // all windows kept for testing
+	/* exported variables */
+	Error    error     `json:"error"`
+	Window   window    `json:"longestWindow"`
+	DaysAway int       `json:"daysAway"`
+	Holidays []Holiday `json:"holidays"` // longest days away
+	Breach   bool      `json:"breach"`
 }
 
 // String returns a simple string representation of trips
 func (trips Trips) String() string {
 	tpl := `
-		window      %d
-		maxStay     %d
-		startFrame  %s
-		endFrame    %s
-		longestStay %d
-		trips       %d
-		windows     %d
-		breach      %t`
+		breach         : %t
+		days away      : %d
+		largest window : %+v
+	`
 	tpl = strings.ReplaceAll(tpl, "\t", "")
 	return fmt.Sprintf(
 		tpl,
-		trips.window,
-		trips.maxStay,
-		DayFmt(trips.startFrame),
-		DayFmt(trips.endFrame),
-		trips.longestStay,
-		len(trips.trips),
-		len(trips.windows),
-		trips.breach,
+		trips.Breach,
+		trips.DaysAway,
+		trips.Window,
 	)
 }
 
-// NewTrips makes a new Trips struct. The window and maxStay are
-// specified in days
-func NewTrips(window, maxStay int) (*Trips, error) {
+// newTrips makes a new Trips struct after checking the overrideable
+// package variables are ok
+func newTrips() (*Trips, error) {
 	trips := Trips{}
-	trips.breach = false
-	if window < 3 {
-		return &trips, errors.New("window cannot be less than 3 days")
+	trips.Breach = false
+	if WindowMaxDays < 3 {
+		return &trips, errors.New("window size cannot be less than 3 days")
 	}
-	if maxStay < 2 {
+	if CompoundStayMaxDays < 2 {
 		return &trips, errors.New("maximum stay cannot be less than 2 days")
 	}
-	if maxStay > window {
-		return &trips, errors.New("maximum stay cannot be greater than the window")
+	if CompoundStayMaxDays > WindowMaxDays {
+		return &trips, errors.New("maximum stay cannot be greater than the window size")
 	}
-	trips.window = window
-	trips.maxStay = maxStay
+	trips.windowSize = WindowMaxDays
+	trips.maxStay = CompoundStayMaxDays
 	return &trips, nil
 }
 
-// AddTrip adds a trip to Trips, checking for validity and overlaps
-func (trips *Trips) AddTrip(start, end string) error {
-	f := func(s string) (time.Time, error) {
-		return time.Parse("2006-01-02", s)
-	}
-	var t trip
-	var err error
-	t.Start, err = f(start)
-	if err != nil {
-		return err
-	}
-	t.End, err = f(end)
-	if err != nil {
-		return err
-	}
+// addHoliday adds a holiday to Trips, checking for validity and overlaps
+func (trips *Trips) addHoliday(h Holiday) error {
 
-	// check validity of this trip
-	if t.End.Before(t.Start) {
-		return fmt.Errorf("start date %s after %s", dayShortFmt(t.Start), dayShortFmt(t.End))
+	// check validity of this holiday
+	if h.End.Before(h.Start) {
+		return fmt.Errorf("start date %s after %s", dayShortFmt(h.Start), dayShortFmt(h.End))
 	}
 	// check no overlaps
-	for _, o := range trips.trips {
-		if ok := o.overlaps(t.Start, t.End); ok != nil {
+	for _, o := range trips.Holidays {
+		if ok := o.overlaps(h.Start, h.End); ok != nil {
 			return fmt.Errorf(
 				"trip %s to %s overlaps with %s to %s",
-				start, end, dayShortFmt(o.Start), dayShortFmt(o.End),
+				h.Start, h.End, dayShortFmt(o.Start), dayShortFmt(o.End),
 			)
 		}
 	}
 
 	// set window dates
-	x := trip{}
-	if trips.startFrame == x.Start || trips.startFrame.After(t.Start) {
-		trips.startFrame = t.Start
+	x := Holiday{}
+	if trips.startFrame == x.Start || trips.startFrame.After(h.Start) {
+		trips.startFrame = h.Start
 	}
-	if trips.endFrame.Before(t.End) {
-		trips.endFrame = t.End
+	if trips.endFrame.Before(h.End) {
+		trips.endFrame = h.End
 	}
-	t.Duration = t.Days()
+	h.Duration = h.days()
 
-	trips.trips = append(trips.trips, t)
+	trips.Holidays = append(trips.Holidays, h)
 	return nil
 }
 
-// Calculate calculates the trip stays for each applicable window
-// between the start and end date frames. The window calculator could be
-// moved to goroutines to speed up processing, although it seems
-// sufficiently fast already.
-func (trips *Trips) Calculate() error {
-	if len(trips.trips) == 0 {
-		return errors.New("no trips were provided to calculate")
+// window stores the results of a calculation window
+type window struct {
+	Start        time.Time `json:Start`
+	End          time.Time `json:End`
+	HolidayParts []Holiday `json:partialHolidays` // parts of any overlapping holidays
+	DaysAway     int       `json:daysAway`        // days away for this window
+}
+
+// String returns a printable version of a window
+func (w window) String() string {
+	tpl := "%s : %s (%d)\n    components: "
+	s := fmt.Sprintf(
+		tpl, DayFmt(w.Start), DayFmt(w.End), w.DaysAway,
+	)
+	if len(w.HolidayParts) == 0 {
+		s += "none"
+		return s
+	}
+	for _, h := range w.HolidayParts {
+		s = s + fmt.Sprintf(" %s", h)
+	}
+	return s
+}
+
+// calculate performs the window calculation returning the Trips struct
+// and error for returning by Calculate.
+// The window calculator could be moved to goroutines to speed up
+// processing, although it seems sufficiently fast already.
+func (trips *Trips) calculate() (*Trips, error) {
+
+	// check trips has been properly initialised and there are holidays
+	// to process
+	if trips.maxStay == 0 || trips.windowSize == 0 {
+		return trips, errors.New("trip not properly initialised")
+	}
+	if len(trips.Holidays) < 1 {
+		return trips, errors.New("no holidays provided")
 	}
 
 	// set suitable frame start and end in which to calculate windows
-	windowDuration := durationDays(trips.window - 1) // remove last day
+	windowDuration := durationDays(trips.windowSize - 1) // remove last day
 	trips.endFrame = trips.endFrame.Add(-windowDuration)
 	if trips.endFrame.Before(trips.startFrame) {
 		trips.endFrame = trips.startFrame
@@ -206,70 +150,57 @@ func (trips *Trips) Calculate() error {
 		w := window{}
 		w.Start = d
 		w.End = d.Add(windowDuration)
-		// testStub(d, w)
-		for _, t := range trips.trips {
+
+		for _, t := range trips.Holidays {
 			partialTrip := t.overlaps(w.Start, w.End)
 			if partialTrip == nil {
 				continue
 			}
-			w.TripParts = append(w.TripParts, *partialTrip)
-			w.DaysAway += partialTrip.Days()
+			partialTrip.Duration = partialTrip.days()
+			w.HolidayParts = append(w.HolidayParts, *partialTrip)
+			w.DaysAway += partialTrip.days()
+
+			// set longest trip/window if appropriate
+			if w.DaysAway > trips.DaysAway {
+				trips.DaysAway = w.DaysAway
+				trips.Window = w
+			}
+			if w.DaysAway > trips.maxStay {
+				trips.Breach = true
+			}
 		}
-		trips.windows = append(trips.windows, w)
-		if w.DaysAway > trips.longestStay {
-			trips.longestStay = w.DaysAway
-		}
-		if w.DaysAway > trips.maxStay {
-			trips.breach = true
+		trips.windows = append(trips.windows, w) // kept for testing
+	}
+	return trips, nil
+}
+
+// Calculate initialises a new Trips struct with the configuration
+// windowSize (the number of days over which to do the calculation) and
+// maxStay (the length of compound holidays), adds holidays then runs
+// the calculation, returning the resulting Trips object, and error if
+// any.
+func Calculate(hols []Holiday) (*Trips, error) {
+
+	// initialise Trips
+	trips, err := newTrips()
+	trips.Error = err
+	if trips.Error != nil {
+		return trips, trips.Error
+	}
+
+	// add holidays
+	if len(hols) == 0 {
+		trips.Error = errors.New("no trips were provided to calculate")
+		return trips, trips.Error
+	}
+	for _, h := range hols {
+		trips.Error = trips.addHoliday(h)
+		if trips.Error != nil {
+			return trips, trips.Error
 		}
 	}
-	return nil
-}
 
-// LongestTrips returns a boolean notifying of a breach of the provided
-// window and stays parameters together with the analysis windows with
-// the longest compound stays, returning at most resultsNo results.
-// Normally only the top result is expected to be needed, but note that
-// for windows of equal daysAway values, the one dated earliest will
-// come first as windows are made in date order.
-func (trips *Trips) LongestTrips(resultsNo int) (breach bool, windows []window) {
-	breach = trips.breach
-	for _, w := range trips.windows {
-		if w.DaysAway > 0 {
-			windows = append(windows, w)
-		}
-	}
-	sort.SliceStable(windows, func(i, j int) bool {
-		return windows[i].DaysAway > windows[j].DaysAway
-	})
-	if len(windows) >= resultsNo {
-		windows = windows[:resultsNo]
-	}
-	return
-}
+	// perform the calculation
+	return trips.calculate()
 
-// LongestTrip returns the first result from LongestTrips
-func (trips *Trips) LongestTrip() (breach bool, w window, err error) {
-	breach, windows := trips.LongestTrips(1)
-	if len(windows) == 0 {
-		err = errors.New("no results found")
-		return
-	}
-	w = windows[0]
-	return breach, w, nil
-}
-
-// durationDays returns a duration for the number of days specified
-func durationDays(d int) time.Duration {
-	return time.Duration(d) * time.Hour * 24
-}
-
-// DayFmt returns a custom string representation of a date
-func DayFmt(d time.Time) string {
-	return d.Format("Monday 2 January 2006")
-}
-
-// DayFmt returns a short custom string representation of a date
-func dayShortFmt(d time.Time) string {
-	return d.Format("2006-01-02")
 }
