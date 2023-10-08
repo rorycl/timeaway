@@ -17,10 +17,11 @@ import (
 // before its Start.
 // The Holiday struct is also used to describe partial holidays for
 // `window.HolidayParts`.
+
 type Holiday struct {
-	Start    time.Time `json:"Start"`                                     // start date
-	End      time.Time `json:"End"`                                       // end date
-	Duration int       `json:"Duration,omitempty" form:form:",omitempty"` // duration in days
+	Start    time.Time `json:"Start"`                        // start date
+	End      time.Time `json:"End"`                          // end date
+	Duration int       `json:",omitempty" form:",omitempty"` // duration in days
 }
 
 // newHoliday returns a new Holiday from two dates (time.Time values)
@@ -54,25 +55,6 @@ func newHolidayFromStr(s, e string) (*Holiday, error) {
 		return h, err
 	}
 	return newHoliday(st, et)
-}
-
-// timeForJSON is a custom time.Time
-type timeJSON time.Time
-
-// UnmarshalJSON parses JSON time values
-func (t *timeJSON) UnmarshalJSON(buf []byte) error {
-	tt, err := time.Parse(time.DateOnly, strings.Trim(string(buf), `"`))
-	if err != nil {
-		return err
-	}
-	*t = timeJSON(tt)
-	return nil
-}
-
-// holidaysFromJSON is a struct suitable for decoding json paramaters
-type holidaysFromJSON struct {
-	Start []timeJSON
-	End   []timeJSON
 }
 
 // holidaysFromURL is a struct suitable for decoding parameters provided
@@ -113,32 +95,55 @@ func HolidaysURLDecoder(input url.Values) ([]Holiday, error) {
 	return hols, err
 }
 
+type JSONHoliday struct {
+	Start JSONTime `json:"Start"` // start date
+	End   JSONTime `json:"End"`   // end date
+}
+
+type JSONTime struct {
+	time.Time
+}
+
+// https://blog.gopheracademy.com/advent-2016/advanced-encoding-decoding/
+func (t JSONTime) MarshalJSON() ([]byte, error) {
+	return json.Marshal(t.Time.Format("2006-02-01"))
+}
+
+func (t *JSONTime) UnmarshalJSON(data []byte) error {
+	var err error
+	t.Time, err = time.Parse("2006-01-02", strings.Trim(string(data), `"`))
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 // HolidaysJSONDecoder decodes a set of holidays, provided as JSON
 func HolidaysJSONDecoder(input []byte) ([]Holiday, error) {
-	holsByJSON := holidaysFromJSON{}
-	hols := []Holiday{}
 
-	err := json.Unmarshal(input, &holsByJSON)
+	var hols []Holiday
+	var jsonHols []JSONHoliday
+
+	emptyTime := time.Time{}
+
+	err := json.Unmarshal(input, &jsonHols)
 	if err != nil {
 		return hols, err
 	}
-	if len(holsByJSON.Start) < 1 {
+	if len(jsonHols) < 1 {
 		return hols, nil
 	}
-	if len(holsByJSON.Start) != len(holsByJSON.End) {
-		return hols, errors.New("incorrect number of url arguments")
-	}
-	for i := 0; i < len(holsByJSON.Start); i++ {
-		h, err := newHoliday(
-			time.Time(holsByJSON.Start[i]), // convert back to time.Time
-			time.Time(holsByJSON.End[i]),
-		)
+	for _, j := range jsonHols {
+		if j.Start.Time == emptyTime {
+			return hols, errors.New("empty time value")
+		}
+		hol, err := newHoliday(j.Start.Time, j.End.Time)
 		if err != nil {
 			return hols, err
 		}
-		hols = append(hols, *h)
+		hols = append(hols, *hol)
 	}
-	return hols, err
+	return hols, nil
 }
 
 // String returns a string representation of a holiday

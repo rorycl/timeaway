@@ -8,7 +8,7 @@ import (
 
 func Example() {
 
-	// override the package variables if needed
+	// package variables
 	WindowMaxDays = 180      // maximum window of days to calculate over
 	CompoundStayMaxDays = 90 // longest allowed compound trip length in days
 
@@ -31,8 +31,12 @@ func Example() {
 
 	// or add trips by json
 	holidays = []Holiday{}
-	json := []byte(`{"Start": ["2022-01-01", "2023-01-06", "2023-02-11", "2023-06-10"],
-		               "End": ["2022-01-01", "2023-02-07", "2023-04-04", "2023-06-14"]}`)
+	json := []byte(
+		`[{"Start":"2022-01-01", "End":"2022-01-01"},
+          {"Start":"2023-01-06", "End":"2023-02-07"},
+		  {"Start":"2023-02-11", "End":"2023-04-04"},
+		  {"Start":"2023-06-10", "End":"2023-06-14"}]`,
+	)
 	holidays, err = HolidaysJSONDecoder(json)
 	fe(err)
 

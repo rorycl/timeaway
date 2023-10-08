@@ -14,25 +14,30 @@ import (
 
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
-	"github.com/gorilla/schema"
 	"github.com/rorycl/timeaway/trips"
 )
 
-// production is default; set InDevelopment to true with build tag
-var InDevelopment bool = false
+var (
+	// WebMaxHeaderBytes is the largest number of header bytes accepted by
+	// the webserver
+	WebMaxHeaderBytes int = 1 << 17 // ~125k
 
-// WebMaxHeaderBytes is the largest number of header bytes accepted by
-// the webserver
-var WebMaxHeaderBytes int = 1 << 17 // ~125k
+	// ServerAddress is the default Server network address
+	ServerAddress string = "127.0.0.1"
 
-// ServerAddress is the default Server network address
-var ServerAddress string = "127.0.0.1"
+	// ServerPort is the default Server network port
+	ServerPort string = "8000"
 
-// ServerPort is the default Server network port
-var ServerPort string = "8000"
+	// BaseURL is the base url for redirects, etc.
+	BaseURL string = ""
 
-// BaseURL is the base url for redirects, etc.
-var BaseURL string = ""
+	// calculate sets the calculation method in use to allow swapping
+	// out for testing
+	calculate func([]trips.Holiday) (*trips.Trips, error) = trips.Calculate
+
+	// production is default; set inDevelopment to true with build tag
+	inDevelopment bool = false
+)
 
 // Serve runs the web server on the specified address and port
 func Serve(addr string, port string) {
@@ -78,7 +83,6 @@ func Serve(addr string, port string) {
 	// configure server options
 	server := &http.Server{
 		Addr:           addr + ":" + port,
-		ReadTimeout:    1 * time.Second,
 		WriteTimeout:   3 * time.Second,
 		MaxHeaderBytes: WebMaxHeaderBytes,
 		Handler:        r,
@@ -94,64 +98,29 @@ func Serve(addr string, port string) {
 //go:embed tpl/home.html
 var homeTemplate string
 
-// holiday structure
-type holiday struct {
-	Start string `json:"Start"`
-	End   string `json:"End"`
-}
-
-// holidayByURL
-type holidaysByURL struct {
-	Start []string `schema:"Start"`
-	End   []string `schema:"End"`
-}
-
-// holidays are a slice of holiday
-var holidays []holiday
-
 // Home is the home page
 func Home(w http.ResponseWriter, r *http.Request) {
 
 	t := template.Must(template.New("home.html").Parse(homeTemplate))
-	if InDevelopment {
+	if inDevelopment {
 		t = template.Must(template.New("home.html").ParseFiles("tpl/home.html"))
 	}
 
-	// grab dates from url, if any
-	inputDates := func() []holiday {
-		hols := []holiday{}
-		var decoder = schema.NewDecoder()
-		var hbu holidaysByURL
-		_ = decoder.Decode(&hbu, r.URL.Query()) // ignore errors
-		for i, s := range hbu.Start {
-			_, err := time.Parse("2006-01-02", s)
-			if err != nil {
-				continue
-			}
-			if i > len(hbu.End)-1 {
-				continue
-			}
-			_, err = time.Parse("2006-01-02", hbu.End[i])
-			if err != nil {
-				continue
-			}
-			hols = append(hols, holiday{s, hbu.End[i]})
-		}
-		return hols
-	}()
+	// retrieve holidays, if any, ignoring errors
+	holidays, _ := trips.HolidaysURLDecoder(r.URL.Query())
 
 	data := struct {
 		Title      string
 		Address    string
 		Port       string
 		PostURL    string
-		InputDates []holiday
+		InputDates []trips.Holiday
 	}{
 		"trip calculator",
 		ServerAddress,
 		ServerPort,
 		BaseURL + "/trips",
-		inputDates,
+		holidays,
 	}
 	err := t.Execute(w, data)
 	if err != nil {
@@ -200,9 +169,9 @@ func Trips(w http.ResponseWriter, r *http.Request) {
 		errSender("body reading error", err)
 		return
 	}
-	// log.Printf("body%+v\n", string(body))
 
-	err = json.Unmarshal(body, &holidays)
+	// extract holidays from POSTed json
+	holidays, err := trips.HolidaysJSONDecoder(body)
 	if err != nil {
 		errSender("form json decoding error", err)
 		return
@@ -212,39 +181,25 @@ func Trips(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// trips (from module)
-	window := 180
-	compoundStayMaxLength := 90
-
-	trs, err := trips.NewTrips(window, compoundStayMaxLength)
-	if err != nil {
-		errSender("Could not register trip:", err)
-		return
-	}
-
-	for _, h := range holidays {
-		err = trs.AddTrip(h.Start, h.End)
-		if err != nil {
-			errSender("could not add trip:", err)
-			return
-		}
-	}
-
-	err = trs.Calculate()
+	// perform the calculation
+	trs, err := calculate(holidays)
 	if err != nil {
 		errSender("calculation error: ", err)
 		return
 	}
 
-	json, err := trs.AsJSON()
+	// convert to json
+	jBytes, err := json.Marshal(trs)
 	if err != nil {
 		errSender("json encoding error: ", err)
 		return
 	}
-	fmt.Println(string(json))
+	if inDevelopment {
+		fmt.Println(string(jBytes))
+	}
 
 	w.WriteHeader(http.StatusOK)
-	_, err = w.Write(json)
+	_, err = w.Write(jBytes)
 	if err != nil {
 		log.Printf("could not write trips error %v", err)
 	}

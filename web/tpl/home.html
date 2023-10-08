@@ -93,21 +93,21 @@ $(document).ready(function () {
             },
         }).then(function(result) { // write success data to the results div
             var data = result;
-            var partials = listBuilder(data.partialTrips);
+            var partials = listBuilder(data.longestWindow.partialHolidays);
             var holidays = listBuilder(data.holidays);
-            var breach = `${data.windowDaysAway > 90 ? 'breach' : 'do not breach'}`
+            var breach = `${data.daysAway > 90 ? 'breach' : 'do not breach'}`
             var contents = $(`
 <div id="results">
 <h2>Results</h2>
 <p class="breach-${data.breach}">These holidays ${breach} the 90 day in 180 rule.</p>
-<p>The longest length of compound holidays lasted ${data.windowDaysAway} days for a window starting on ${dateToString(data.windowStart)} and ending on ${dateToString(data.windowEnd)}.</p>
+<p>The longest length of compound holidays lasted ${data.daysAway} days for a window starting on ${dateToString(data.longestWindow.Start)} and ending on ${dateToString(data.longestWindow.End)}.</p>
 <p class="pre-list">The holidays within this window ran from:</p>${partials}</p>
 <hr />
 <p class="pre-list">The holidays under analysis were:</p>${holidays}</div>`);
             $("#results").replaceWith(contents);
         }).fail(function(result) { // write the failure to the results div
             data = result.responseJSON;
-            var contents2 = $(`<div id="results"><h2>Results</h2><p>${data.error}</p></div>`);
+            var contents2 = $(`<div id="results"><h2>Results</h2><p>${data.Error}</p></div>`);
             $("#results").replaceWith(contents2);
         });
         event.preventDefault();
@@ -214,13 +214,14 @@ rule. The order of the trips isn't important, but they shouldn't overlap in time
 {{ range $index, $date := .InputDates }}
 <p id="p{{ $index }}">
 <label for="start">start:</label>
-<input type="date" class="start" name="Start" value="{{ $date.Start }}" min="2018-01-01" max="2033-01-01" required />
+<input type="date" class="start" name="Start" value="{{ $date.Start.Format "2006-01-02" }}" min="2018-01-01" max="2033-01-01" required />
 <label for="start">end:</label>
-<input type="date" class="end" name="End" value="{{ $date.End }}" min="2018-01-01" max="2033-01-01" required />
+<input type="date" class="end" name="End" value="{{ $date.End.Format "2006-01-02" }}" min="2018-01-01" max="2033-01-01" required />
 <button class="rmv ignore" type="button" onclick="remover('p{{ $index }}')";>remove</button>
 </p>
 {{ end }}
 {{ end }}
+{{ if not .InputDates }}
 <p id="p{{ len .InputDates }}">
 <label for="start">start:</label>
 <input type="date" class="start" name="Start" value="2023-01-01" min="2018-01-01" max="2033-01-01" required />
@@ -228,6 +229,7 @@ rule. The order of the trips isn't important, but they shouldn't overlap in time
 <input type="date" class="end" name="End" value="" min="2018-01-01" max="2033-01-01" required />
 <button class="rmv ignore" type="button" onclick="remover('p{{ len .InputDates }}')";>remove</button>
 </p>
+{{ end }}
 <div id="rpl"></div>
 <p>
 <button id="addBtn" class="ignore" name="button" type="button">add more trips</button>

@@ -124,3 +124,51 @@ func TestHolidaysFromURL(t *testing.T) {
 		})
 	}
 }
+
+func TestHolidaysFromJSON(t *testing.T) {
+
+	testCases := []struct {
+		input   []byte // json
+		holsLen int
+		err     bool
+	}{
+		{
+			input:   []byte(`[{"Start":"2022-12-01","End":"2022-12-02"},{"Start":"2023-01-02","End":"2023-03-30"},{"Start":"2023-04-01","End":"2023-04-02"}]`),
+			holsLen: 3,
+			err:     false,
+		},
+		{
+			input:   []byte(`[{"Start":"2022-12-01","End":"2022-12-02"},{"Start":"2023-01-02","End":"2023-03-30"}]`),
+			holsLen: 2,
+			err:     false,
+		},
+		{
+			input:   []byte(`[{"Start":"2022-12-01","End":"2022-11-02"}]`),
+			holsLen: 0,
+			err:     true,
+		},
+		{
+			input:   []byte(`[{}]`),
+			holsLen: 0,
+			err:     true,
+		},
+	}
+
+	for i, tc := range testCases {
+		t.Run("test-"+strconv.Itoa(i), func(t *testing.T) {
+			holidays, err := HolidaysJSONDecoder(tc.input)
+			if err != nil && !tc.err {
+				t.Errorf("unexpected error %v", err)
+			}
+			if err == nil && tc.err {
+				t.Error("expected error")
+			}
+			t.Log(holidays, err)
+			if !tc.err {
+				if got, want := len(holidays), tc.holsLen; got != want {
+					t.Errorf("holidays length got %d != want %d", got, want)
+				}
+			}
+		})
+	}
+}
