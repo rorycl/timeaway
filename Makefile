@@ -47,7 +47,7 @@ cover-report:
 clean:
 	rm cover.html coverage.out
 
-check: check-format check-vet lint
+check: check-format check-vet lint test
 
 check-format: 
 	test -z $$(go fmt ./...)

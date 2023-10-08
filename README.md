@@ -25,9 +25,9 @@ url parameters each time a calculation is made, allowing calculations to
 be conveniently saved or bookmarked.
 
 The calculation method uses a 180 day moving window to calculate the
-longest compound trip length (`windowDaysAway`). Where more than one
-window has the same `windowDaysAway` the window with the earliest start
-date is reported.
+longest compound trip length (`daysAway`). Where more than one window
+has the same `daysAway` the window with the earliest start date is
+reported.
 
 The `/trips` POST endpoint can be interacted with over json. This command:
 

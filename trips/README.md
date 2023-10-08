@@ -22,6 +22,8 @@ time.
 
 ## Example
 
+The example below is taken from `example_test.go`.
+
 ```go
 package trips
 
@@ -37,6 +39,7 @@ func Example() {
 	WindowMaxDays = 180      // maximum window of days to calculate over
 	CompoundStayMaxDays = 90 // longest allowed compound trip length in days
 
+	// fail immediately on error
 	fe := func(err error) {
 		if err != nil {
 			log.Fatal(err)
@@ -57,7 +60,7 @@ func Example() {
 	// or add trips by json
 	json := []byte(
 		`[{"Start":"2022-01-01", "End":"2022-01-01"},
-          {"Start":"2023-01-06", "End":"2023-02-07"},
+		  {"Start":"2023-01-06", "End":"2023-02-07"},
 		  {"Start":"2023-02-11", "End":"2023-04-04"},
 		  {"Start":"2023-06-10", "End":"2023-06-14"}]`,
 	)
