@@ -55,11 +55,6 @@ func TestTrips(t *testing.T) {
 	WindowMaxDays = 5
 	CompoundStayMaxDays = 4
 
-	trips, err := newTrips()
-	if err != nil {
-		t.Fatalf("could not make trips %v", err)
-	}
-
 	tp := func(s, e string) Holiday {
 		h, err := newHolidayFromStr(s, e)
 		if err != nil {
@@ -77,7 +72,7 @@ func TestTrips(t *testing.T) {
 		tp("2023-01-24", "2023-01-25"),
 	}
 
-	trips, err = Calculate(hols)
+	trips, err := Calculate(hols)
 	if err != nil {
 		t.Fatalf("calculation error %v", err)
 	}

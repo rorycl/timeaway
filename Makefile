@@ -7,6 +7,8 @@ GO_VERSION := 1.21  # <1>
 
 COVERAGE_AMT := 60  # should be 80
 
+HEREGOPATH := `go env GOPATH`
+
 # setup: # <2>
 # 	install-go
 # 	init-go
@@ -45,7 +47,7 @@ cover-report:
 clean:
 	rm cover.html coverage.out
 
-check: check-format check-vet
+check: check-format check-vet lint
 
 check-format: 
 	test -z $$(go fmt ./...)
@@ -53,14 +55,18 @@ check-format:
 check-vet: 
 	test -z $$(go vet ./...)
 
+testme:
+	echo $(HEREGOPATH)
+
 install-lint:
-	# https://golangci-lint.run/usage/install/#local-installation
-	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.54.2
+	# https://golangci-lint.run/usage/install/#local-installation to GOPATH
+	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(HEREGOPATH)/bin v1.54.2
 	# report version
 	golangci-lint --version
 
 lint:
-	golangci-lint run -v ./...
+	# golangci-lint run -v ./... 
+	golangci-lint run ./... 
 
 module-update-tidy:
 	go get -u ./...
