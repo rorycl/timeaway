@@ -4,13 +4,14 @@ package web
 // https://bignerdranch.com/blog/using-the-httptest-package-in-golang/
 
 import (
-	"fmt"
+	"errors"
 	"io"
 	"log"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/rorycl/timeaway/trips"
 )
@@ -61,40 +62,60 @@ func TestHealth(t *testing.T) {
 
 func TestTripsEndpoint(t *testing.T) {
 
-	// http.HandleFunc("/trips", Trips)
-	// log.Fatal(http.ListenAndServe(":8989", nil))
+	// swap out the webserver development/testing package level func vars
 
+	// holidayJSONDecoder makes holidays from a POSTED json body
+	holidayJSONDecoder = func(b []byte) ([]trips.Holiday, error) {
+		trs := []trips.Holiday{}
+		if len(b) < 1 {
+			return trs, errors.New("no content received")
+		}
+		tp := func(s string) time.Time {
+			ti, err := time.Parse("2006-01-02", s)
+			if err != nil {
+				t.Fatalf("could not parse %s in holidayJSONDecoder: %v", s, err)
+			}
+			return ti
+		}
+		holiday := trips.Holiday{tp("2023-01-01"), tp("2023-01-02"), 2}
+		trs = append(trs, holiday)
+		return trs, nil
+	}
+
+	// calculate is the main method for calculations
 	calculate = func([]trips.Holiday) (*trips.Trips, error) {
 		hs := trips.Trips{}
 		return &hs, nil
 	}
 
+	// holidayJSONMarshall returns a json representation of a
+	// trips.Trips
+	tripsJSONMarshal = func(v any) ([]byte, error) {
+		return []byte(`{"result":"ok"}`), nil
+	}
+
 	tt := []struct {
-		name   string
-		method string
-		input  string // json
-		// want       []string // json
+		name       string
+		method     string
+		input      string // json
 		statusCode int
 	}{
 		{
-			name:   "succeed with breach",
-			method: http.MethodPost,
-			input:  `[{"Start":"2022-12-01","End":"2022-12-02"},{"Start":"2023-01-02","End":"2023-03-30"},{"Start":"2023-04-01","End":"2023-04-02"}]`,
-			// want:       []string{`"error":"","breach":true`, `"holidays":[{"Start":"2022-12-01T00:00:00Z","End":"2022-12-02T00:00:00Z","Duration":2},{"Start":"2023-01-02T00:00:00Z","End":"2023-03-30T00:00:00Z","Duration":88},{"Start":"2023-04-01T00:00:00Z","End":"2023-04-02T00:00:00Z","Duration":2}]`},
+			name:       "succeed post",
+			method:     http.MethodPost,
+			input:      `[{"Start":"2022-12-01","End":"2022-12-02"}]`,
 			statusCode: http.StatusOK,
 		},
 		{
-			name:   "succeed without breach",
-			method: http.MethodPost,
-			input:  `[{"Start":"2022-12-01","End":"2022-12-02"},{"Start":"2023-01-02","End":"2023-03-28"},{"Start":"2023-04-01","End":"2023-04-02"}]`,
-			// want:       []string{`"error":"","breach":false,`},
-			statusCode: http.StatusOK,
+			name:       "fail no POST body",
+			method:     http.MethodPost,
+			input:      ``,
+			statusCode: http.StatusBadRequest,
 		},
 		{
-			name:   "fail due to GET",
-			method: http.MethodGet,
-			input:  `[{"Start":"2022-12-01","End":"2022-12-02"}]`,
-			// want:       []string{`"Error":"endpoint only accepts POST requests, got GET"`},
+			name:       "fail due to GET",
+			method:     http.MethodGet,
+			input:      ``,
 			statusCode: http.StatusBadRequest,
 		},
 	}
@@ -110,23 +131,23 @@ func TestTripsEndpoint(t *testing.T) {
 
 			res := w.Result()
 			defer res.Body.Close()
-			data, err := io.ReadAll(res.Body)
+			_, err := io.ReadAll(res.Body)
 			if err != nil {
-				log.Fatal(err)
+				t.Fatal(err)
 			}
 
 			if tc.statusCode != res.StatusCode {
 				t.Errorf("expected status %d, got %d", tc.statusCode, res.StatusCode)
 			}
 
-			responseBody := string(data)
-			fmt.Println(responseBody)
 			/*
-				for _, w := range tc.want {
-					if !strings.Contains(responseBody, w) {
-						t.Errorf("body %s did not contain %s", responseBody, w)
+				responseBody := string(data)
+				fmt.Println(responseBody)
+					for _, w := range tc.want {
+						if !strings.Contains(responseBody, w) {
+							t.Errorf("body %s did not contain %s", responseBody, w)
+						}
 					}
-				}
 			*/
 		})
 	}

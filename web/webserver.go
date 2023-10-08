@@ -30,10 +30,20 @@ var (
 
 	// BaseURL is the base url for redirects, etc.
 	BaseURL string = ""
+)
+
+// development/testing vars
+var (
+
+	// holidayJSONDecoder sets the holiday POST decoder
+	holidayJSONDecoder func([]byte) ([]trips.Holiday, error) = trips.HolidaysJSONDecoder
 
 	// calculate sets the calculation method in use to allow swapping
 	// out for testing
 	calculate func([]trips.Holiday) (*trips.Trips, error) = trips.Calculate
+
+	// tripsJSONMarshall sets the holiday marshaller
+	tripsJSONMarshal func(v any) ([]byte, error) = json.Marshal
 
 	// production is default; set inDevelopment to true with build tag
 	inDevelopment bool = false
@@ -103,11 +113,14 @@ func Home(w http.ResponseWriter, r *http.Request) {
 
 	t := template.Must(template.New("home.html").Parse(homeTemplate))
 	if inDevelopment {
-		t = template.Must(template.New("home.html").ParseFiles("tpl/home.html"))
+		t = template.Must(template.New("home.html").ParseFiles("web/tpl/home.html"))
 	}
 
 	// retrieve holidays, if any, ignoring errors
-	holidays, _ := trips.HolidaysURLDecoder(r.URL.Query())
+	holidays, err := trips.HolidaysURLDecoder(r.URL.Query())
+	if inDevelopment {
+		log.Printf("holidays GET : %+v err : %v", holidays, err)
+	}
 
 	data := struct {
 		Title      string
@@ -122,7 +135,7 @@ func Home(w http.ResponseWriter, r *http.Request) {
 		BaseURL + "/trips",
 		holidays,
 	}
-	err := t.Execute(w, data)
+	err = t.Execute(w, data)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, "template writing problem : %s", err.Error())
@@ -169,9 +182,12 @@ func Trips(w http.ResponseWriter, r *http.Request) {
 		errSender("body reading error", err)
 		return
 	}
+	if inDevelopment {
+		log.Println("body content:", string(body))
+	}
 
 	// extract holidays from POSTed json
-	holidays, err := trips.HolidaysJSONDecoder(body)
+	holidays, err := holidayJSONDecoder(body)
 	if err != nil {
 		errSender("form json decoding error", err)
 		return
@@ -179,6 +195,9 @@ func Trips(w http.ResponseWriter, r *http.Request) {
 	if len(holidays) < 1 {
 		errSender("no holidays were found", nil)
 		return
+	}
+	if inDevelopment {
+		log.Println("holidays", holidays)
 	}
 
 	// perform the calculation
@@ -189,13 +208,14 @@ func Trips(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// convert to json
-	jBytes, err := json.Marshal(trs)
+	jBytes, err := tripsJSONMarshal(trs)
 	if err != nil {
 		errSender("json encoding error: ", err)
 		return
 	}
+
 	if inDevelopment {
-		fmt.Println(string(jBytes))
+		log.Println("decoded json:", string(jBytes))
 	}
 
 	w.WriteHeader(http.StatusOK)
