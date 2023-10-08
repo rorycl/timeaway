@@ -62,3 +62,7 @@ install-lint:
 lint:
 	golangci-lint run -v ./...
 
+module-update-tidy:
+	go get -u ./...
+	go mod tidy
+

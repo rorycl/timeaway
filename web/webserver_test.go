@@ -77,7 +77,7 @@ func TestTripsEndpoint(t *testing.T) {
 			}
 			return ti
 		}
-		holiday := trips.Holiday{tp("2023-01-01"), tp("2023-01-02"), 2}
+		holiday := trips.Holiday{Start: tp("2023-01-01"), End: tp("2023-01-02"), Duration: 2}
 		trs = append(trs, holiday)
 		return trs, nil
 	}

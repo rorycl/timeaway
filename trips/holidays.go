@@ -106,7 +106,7 @@ type JSONTime struct {
 
 // https://blog.gopheracademy.com/advent-2016/advanced-encoding-decoding/
 func (t JSONTime) MarshalJSON() ([]byte, error) {
-	return json.Marshal(t.Time.Format("2006-02-01"))
+	return json.Marshal(t.Time.Format("2006-01-02"))
 }
 
 func (t *JSONTime) UnmarshalJSON(data []byte) error {
@@ -204,5 +204,5 @@ func DayFmt(d time.Time) string {
 
 // dayShortFmt returns a short custom string representation of a date
 func dayShortFmt(d time.Time) string {
-	return d.Format("2006-01-02")
+	return d.Format("02/01/2006")
 }

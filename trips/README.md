@@ -1,3 +1,28 @@
+# Trips package
+
+## Background
+
+This package helps calculate if foreign visitors' trips to Schengen
+countries conform with Regulation (EU) No 610/2013 of 26 June 2013
+limiting the total length of all trips to Schengen states to no more
+than 90 days in any 180 day period.
+
+The date of entry should be considered as the first day of stay on the
+territory of the Member States and the date of exit should be considered
+as the last day of stay on the territory of the Member States.
+
+For more details on the Regulation and its application please see
+https://ec.europa.eu/assets/home/visa-calculator/docs/short_stay_schengen_calculator_user_manual_en.pdf.
+
+The calculation provided by this package uses a moving window configured
+in days over the trips provided to find the maximum length of days,
+inclusive of trip start and end dates, taken by the trips to learn if
+these breach the permissible length of stay. Trips cannot overlap in
+time.
+
+## Example
+
+```go
 package trips
 
 import (
@@ -57,3 +82,4 @@ func Example() {
 	//                  [Friday 6 January 2023 to Tuesday 7 February 2023 (33) Saturday 11 February 2023 to Tuesday 4 April 2023 (53) Saturday 10 June 2023 to Wednesday 14 June 2023 (5)]
 
 }
+```

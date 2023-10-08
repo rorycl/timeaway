@@ -76,7 +76,7 @@ func (trips *Trips) addHoliday(h Holiday) error {
 		if ok := o.overlaps(h.Start, h.End); ok != nil {
 			return fmt.Errorf(
 				"trip %s to %s overlaps with %s to %s",
-				h.Start, h.End, dayShortFmt(o.Start), dayShortFmt(o.End),
+				dayShortFmt(h.Start), dayShortFmt(h.End), dayShortFmt(o.Start), dayShortFmt(o.End),
 			)
 		}
 	}
@@ -97,10 +97,10 @@ func (trips *Trips) addHoliday(h Holiday) error {
 
 // window stores the results of a calculation window
 type window struct {
-	Start        time.Time `json:Start`
-	End          time.Time `json:End`
-	HolidayParts []Holiday `json:partialHolidays` // parts of any overlapping holidays
-	DaysAway     int       `json:daysAway`        // days away for this window
+	Start        time.Time `json:"Start"`
+	End          time.Time `json:"End"`
+	HolidayParts []Holiday `json:"partialHolidays"` // parts of any overlapping holidays
+	DaysAway     int       `json:"daysAway"`        // days away for this window
 }
 
 // String returns a printable version of a window

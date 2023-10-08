@@ -2,9 +2,9 @@ echo "curl to succeed, with breach true"
 curl -s -X POST -d '
 [{"Start":"2022-12-01","End":"2022-12-02"},
  {"Start":"2023-01-02","End":"2023-03-30"},
- {"Start":"2023-04-01","End":"2023-04-02"}
+ {"Start":"2023-04-01","End":"2023-04-02"},
  {"Start":"2023-09-03","End":"2023-09-12"}
-]' 127.0.0.1:8080/trips | jq .
+]' 127.0.0.1:8000/trips | jq .
 echo ""
 
 echo "curl to succeed, with breach false"
@@ -12,7 +12,7 @@ curl -s -X POST -d '
 [{"Start":"2022-12-01","End":"2022-12-02"},
  {"Start":"2023-01-02","End":"2023-03-28"},
  {"Start":"2023-04-01","End":"2023-04-02"}
-]' 127.0.0.1:8080/trips | jq .
+]' 127.0.0.1:8000/trips | jq .
 echo ""
 
 echo ""
@@ -21,15 +21,25 @@ curl -s -X POST -d '
 [{"Start":"2022-12-01","End":"2022-12-02"},
  {"Start":"2023-01-02","End":"2023-03-30"},
  {"Start":"2023-03-29","End":"2023-04-02"}
-]' 127.0.0.1:8080/trips | jq .
+]' 127.0.0.1:8000/trips | jq .
 echo ""
 
 echo ""
 echo "curl call to fail due to end date before start date"
-curl -s -X POST -d '[{"Start":"2022-12-01","End":"2022-11-01"}]' 127.0.0.1:8080/trips | jq .
+curl -s -X POST -d '[{"Start":"2022-12-01","End":"2022-11-01"}]' 127.0.0.1:8000/trips | jq .
 echo ""
 
 echo ""
 echo "curl call to fail due to get"
-curl -s -X GET -d '[{"Start":"2022-12-01","End":"2022-11-01"}]' 127.0.0.1:8080/trips | jq .
+curl -s -X GET -d '[{"Start":"2022-12-01","End":"2022-11-01"}]' 127.0.0.1:8000/trips | jq .
 echo ""
+
+echo "could not add trip"
+curl -s -X POST -d '
+[{"Start":"2022-12-01","End":"2022-12-02"},
+ {"Start":"2023-01-02","End":"2022-03-30"},
+ {"Start":"2024-04-01","End":"2024-06-02"}]' 127.0.0.1:8000/trips | jq . 
+# 127.0.0.1 - - [08/Oct/2023:18:29:50 +0100] "POST /trips HTTP/1.1" 400 70 "" "curl/8.2.1"
+# {
+#   "Error": "could not add trip: start date 2023-01-02 after 2022-03-30"
+# }

@@ -92,10 +92,14 @@ func Serve(addr string, port string) {
 
 	// configure server options
 	server := &http.Server{
-		Addr:           addr + ":" + port,
-		WriteTimeout:   3 * time.Second,
-		MaxHeaderBytes: WebMaxHeaderBytes,
-		Handler:        r,
+		Addr:    addr + ":" + port,
+		Handler: r,
+		// timeouts and limits
+		MaxHeaderBytes:    WebMaxHeaderBytes,
+		ReadTimeout:       1 * time.Second,
+		WriteTimeout:      2 * time.Second,
+		IdleTimeout:       30 * time.Second,
+		ReadHeaderTimeout: 2 * time.Second,
 	}
 	log.Printf("serving on %s:%s", addr, port)
 
