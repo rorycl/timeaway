@@ -17,7 +17,6 @@ import (
 // before its Start.
 // The Holiday struct is also used to describe partial holidays for
 // `window.HolidayParts`.
-
 type Holiday struct {
 	Start    time.Time `json:"Start"`                        // start date
 	End      time.Time `json:"End"`                          // end date
@@ -65,7 +64,7 @@ type holidaysFromURL struct {
 	End   []time.Time
 }
 
-// HolidaysURLDecoder decodes a set of holidays, provided as a URL.Query
+// HolidaysURLDecoder decodes a set of holidays provided as a URL.Query
 func HolidaysURLDecoder(input url.Values) ([]Holiday, error) {
 	holsByURL := holidaysFromURL{}
 	hols := []Holiday{}
@@ -95,21 +94,26 @@ func HolidaysURLDecoder(input url.Values) ([]Holiday, error) {
 	return hols, err
 }
 
-type JSONHoliday struct {
-	Start JSONTime `json:"Start"` // start date
-	End   JSONTime `json:"End"`   // end date
-}
-
-type JSONTime struct {
+// jsonTime is a struct for the json marshalling of time
+type jsonTime struct {
 	time.Time
 }
 
-// https://blog.gopheracademy.com/advent-2016/advanced-encoding-decoding/
-func (t JSONTime) MarshalJSON() ([]byte, error) {
+// jsonHoliday provides a shadow struct for Holiday that allows for the
+// marshaling and unmarshaling of 2006-01-02 formatted ates
+type jsonHoliday struct {
+	Start jsonTime `json:"Start"` // start date
+	End   jsonTime `json:"End"`   // end date
+}
+
+// MarshalJSON marshals a jsonTime to 2006-01-02 format
+func (t jsonTime) MarshalJSON() ([]byte, error) {
+	// https://blog.gopheracademy.com/advent-2016/advanced-encoding-decoding/
 	return json.Marshal(t.Time.Format("2006-01-02"))
 }
 
-func (t *JSONTime) UnmarshalJSON(data []byte) error {
+// UnmarshalJSON unmarshals a 2006-01-02 time to time.Time
+func (t *jsonTime) UnmarshalJSON(data []byte) error {
 	var err error
 	t.Time, err = time.Parse("2006-01-02", strings.Trim(string(data), `"`))
 	if err != nil {
@@ -118,11 +122,11 @@ func (t *JSONTime) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// HolidaysJSONDecoder decodes a set of holidays, provided as JSON
+// HolidaysJSONDecoder decodes a set of holidays provided as JSON
 func HolidaysJSONDecoder(input []byte) ([]Holiday, error) {
 
 	var hols []Holiday
-	var jsonHols []JSONHoliday
+	var jsonHols []jsonHoliday
 
 	emptyTime := time.Time{}
 
@@ -149,7 +153,7 @@ func HolidaysJSONDecoder(input []byte) ([]Holiday, error) {
 // String returns a string representation of a holiday
 func (h Holiday) String() string {
 	return fmt.Sprintf(
-		"%s to %s (%d)", DayFmt(h.Start), DayFmt(h.End), h.Duration,
+		"%s to %s (%d)", dayFmt(h.Start), dayFmt(h.End), h.Duration,
 	)
 }
 
@@ -197,8 +201,8 @@ func durationDays(d int) time.Duration {
 	return time.Duration(d) * time.Hour * 24
 }
 
-// DayFmt returns a custom string representation of a date
-func DayFmt(d time.Time) string {
+// dayFmt returns a custom string representation of a date
+func dayFmt(d time.Time) string {
 	return d.Format("Monday 2 January 2006")
 }
 

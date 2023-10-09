@@ -1,10 +1,52 @@
 package trips
 
 import (
+	"bytes"
+	"encoding/json"
 	"net/url"
 	"strconv"
 	"testing"
+	"time"
 )
+
+func TestBasics(t *testing.T) {
+
+	// test newHoliday
+	_, err := newHoliday(time.Now(), time.Now().Add(24*time.Hour))
+	if err != nil {
+		t.Errorf("unexpected error %v", err)
+	}
+	_, err = newHoliday(time.Now(), time.Now().Add(-24*time.Hour))
+	if err == nil {
+		t.Error("error expected")
+	}
+
+	// test newHolidayFromStr
+	_, err = newHolidayFromStr("2023-01-01", "2023-01-02")
+	if err != nil {
+		t.Errorf("unexpected error %v", err)
+	}
+	_, err = newHolidayFromStr("2023-02-01", "2023-01-02")
+	if err == nil {
+		t.Error("error expected")
+	}
+
+	// test jsonHoliday encoding and decoding
+	var jh jsonHoliday
+	j := []byte(`{"Start":"2023-01-31","End":"2023-02-01"}`)
+	err = json.Unmarshal(j, &jh)
+	if err != nil {
+		t.Fatal(err)
+	}
+	j2, err := json.Marshal(jh)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(j, j2) {
+		t.Errorf("j %s != j2 %s", string(j), string(j2))
+	}
+
+}
 
 func TestMakeHolidays(t *testing.T) {
 

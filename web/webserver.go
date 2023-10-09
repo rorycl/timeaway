@@ -236,6 +236,6 @@ func Health(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	resp := map[string]string{"status": "up"}
 	if err := enc.Encode(resp); err != nil {
-		log.Fatal("unable to encode response")
+		log.Print("health error: unable to encode response")
 	}
 }

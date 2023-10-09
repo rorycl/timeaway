@@ -60,6 +60,17 @@ func TestHealth(t *testing.T) {
 	}
 }
 
+// Favicon page returns a 200
+func TestFavicon(t *testing.T) {
+	r := httptest.NewRequest(http.MethodGet, "http://example.com/favicon.ico", nil)
+	w := httptest.NewRecorder()
+	Home(w, r)
+	res := w.Result()
+	if want, got := 200, res.StatusCode; want != got {
+		t.Errorf("expected status %d, got %d", want, got)
+	}
+}
+
 func TestTripsEndpoint(t *testing.T) {
 
 	// swap out the webserver development/testing package level func vars

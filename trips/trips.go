@@ -23,10 +23,10 @@ type Trips struct {
 	windows    []window  // all windows kept for testing
 	/* exported variables */
 	Error    error     `json:"error"`
-	Window   window    `json:"longestWindow"`
-	DaysAway int       `json:"daysAway"`
-	Holidays []Holiday `json:"holidays"` // longest days away
-	Breach   bool      `json:"breach"`
+	Window   window    `json:"longestWindow"` // window with longest daysaway
+	DaysAway int       `json:"daysAway"`      // longest compound days away
+	Holidays []Holiday `json:"holidays"`      // list of holidays under consideration
+	Breach   bool      `json:"breach"`        // if DaysAway breaches CompoundStayMaxDays
 }
 
 // String returns a simple string representation of trips
@@ -107,7 +107,7 @@ type window struct {
 func (w window) String() string {
 	tpl := "%s : %s (%d)\n    components: "
 	s := fmt.Sprintf(
-		tpl, DayFmt(w.Start), DayFmt(w.End), w.DaysAway,
+		tpl, dayFmt(w.Start), dayFmt(w.End), w.DaysAway,
 	)
 	if len(w.HolidayParts) == 0 {
 		s += "none"

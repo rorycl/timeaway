@@ -37,17 +37,19 @@ build-dev:
 test:
 	go test ./... -coverprofile=coverage.out
 
-coverage:
-	go tool cover -func coverage.out \
-	| grep "total:" | awk '{print ((int($$3) > ${COVERAGE_AMT}) != 1) }'
+coverage-verbose:
+	go tool cover -func coverage.out | tee cover.rpt
+
+coverage-ok:
+	cat cover.rpt | grep "total:" | awk '{print ((int($$3) > ${COVERAGE_AMT}) != 1) }'
 
 cover-report:
 	go tool cover -html=coverage.out -o cover.html
 
 clean:
-	rm cover.html coverage.out
+	rm cover.html coverage.out cover.rpt
 
-check: check-format check-vet lint test
+check: check-format check-vet test coverage-verbose coverage-ok cover-report lint 
 
 check-format: 
 	test -z $$(go fmt ./...)

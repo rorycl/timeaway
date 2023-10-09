@@ -1,3 +1,6 @@
+// for the main package contents, please see the trips package
+// the faas top-level package is a GCP cloud function entry point.
+
 // faas is an entry point for GCP serverless function, which cheekily
 // supports other urls too
 package faas
