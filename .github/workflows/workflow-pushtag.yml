@@ -1,6 +1,11 @@
 # This workflow will test a golang project, make artifacts, make a
 # releaes and deploy to GCP FaaS
 # For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-go
+#
+# This workflow depends on several component workflows:
+# * component-artifact.yml
+# * component-lint.yml
+# * component-test.yml
 
 name: test, lint, release and deploy
 
@@ -22,15 +27,15 @@ permissions:
 jobs:
 
   test:
-    uses: './.github/workflows/test-component.yml'
+    uses: './.github/workflows/component-test.yml'
 
   lint:
     needs: test  # requires test to be successful 
-    uses: './.github/workflows/lint-component.yml'
+    uses: './.github/workflows/component-lint.yml'
 
   artifacts:
     needs: lint # requires lint to be successful 
-    uses: './.github/workflows/artifact-component.yml'
+    uses: './.github/workflows/component-artifact.yml'
 
   release:
     # copy the artifact to a release
