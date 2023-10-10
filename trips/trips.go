@@ -80,7 +80,6 @@ func (trips *Trips) addHoliday(h Holiday) error {
 			)
 		}
 	}
-
 	// set window dates
 	x := Holiday{}
 	if trips.startFrame == x.Start || trips.startFrame.After(h.Start) {
@@ -176,9 +175,9 @@ func (trips *Trips) calculate() (*Trips, error) {
 
 // Calculate initialises a new Trips struct with the configuration
 // windowSize (the number of days over which to do the calculation) and
-// maxStay (the length of compound holidays), adds holidays then runs
-// the calculation, returning the resulting Trips object, and error if
-// any.
+// maxStay (the length of compound holidays), adds holidays sequentially
+// then runs the calculation, returning the resulting Trips object, and
+// error if any.
 func Calculate(hols []Holiday) (*Trips, error) {
 
 	// initialise Trips
@@ -202,5 +201,4 @@ func Calculate(hols []Holiday) (*Trips, error) {
 
 	// perform the calculation
 	return trips.calculate()
-
 }

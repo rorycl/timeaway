@@ -66,8 +66,7 @@ func newHolidayFromStr(s, e string) (*Holiday, error) {
 func HolidaysURLDecoder(input url.Values) ([]Holiday, error) {
 
 	// holidaysFromURL is a struct suitable for decoding parameters provided
-	// in a url, such as
-	// `?Start=2022-12-18&End=2023-01-07&Start=2023-02-10&End=2023-02-15`
+	// in a url eg `?Start=2022-12-18&End=2023-01-07&Start=2023-02-10&End=2023-02-15`
 	type holidaysFromURL struct {
 		Start []time.Time
 		End   []time.Time
@@ -105,7 +104,6 @@ func HolidaysURLDecoder(input url.Values) ([]Holiday, error) {
 func HolidaysJSONDecoder(input []byte) ([]Holiday, error) {
 
 	var hols []Holiday
-
 	// internal struct to convert from 2006-01-02 values by first
 	// converting to string
 	type jsonHoliday struct {
@@ -113,7 +111,6 @@ func HolidaysJSONDecoder(input []byte) ([]Holiday, error) {
 		End   string
 	}
 	var jsonHols []jsonHoliday
-
 	err := json.Unmarshal(input, &jsonHols)
 	if err != nil {
 		return hols, err
@@ -121,7 +118,6 @@ func HolidaysJSONDecoder(input []byte) ([]Holiday, error) {
 	if len(jsonHols) < 1 {
 		return hols, nil
 	}
-
 	// make Holiday objects from each jsonHoliday in the slice
 	for _, j := range jsonHols {
 
@@ -154,7 +150,7 @@ func (h Holiday) days() int {
 // overlaps returns a pointer to a partial or full holiday if there is
 // an overlap with the provided dates, else a nil pointer
 func (h Holiday) overlaps(start, end time.Time) *Holiday {
-	partialTrip := Holiday{}
+	partialTrip := new(Holiday)
 	// no overlap
 	if h.Start.After(end) || h.End.Before(start) {
 		return nil
@@ -163,7 +159,7 @@ func (h Holiday) overlaps(start, end time.Time) *Holiday {
 	if h.Start.After(start) && h.End.Before(end) {
 		partialTrip.Start = h.Start
 		partialTrip.End = h.End
-		return &partialTrip
+		return partialTrip
 	}
 	// partial overlap
 	if h.Start.Before(start) || h.Start == start {
@@ -177,7 +173,7 @@ func (h Holiday) overlaps(start, end time.Time) *Holiday {
 		partialTrip.End = h.End
 	}
 	partialTrip.Duration = partialTrip.days()
-	return &partialTrip
+	return partialTrip
 }
 
 // durationDays returns a duration for the number of days specified

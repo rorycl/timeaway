@@ -155,11 +155,14 @@ func Favicon(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, favicon)
 }
 
-// trip is a POST endpoint returning json
+// trip is a POST endpoint receiving json dates from the form at Home,
+// turning this data into Holidays and then performing a calculation on
+// the data, finally returning the json result.
 func Trips(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 
+	// short cut error retuener
 	errSender := func(note string, err error) {
 		w.WriteHeader(http.StatusBadRequest)
 		j, _ := json.Marshal(struct {
