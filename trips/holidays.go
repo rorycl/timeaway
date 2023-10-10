@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
-	"strings"
 	"time"
 
 	"github.com/go-playground/form"
@@ -28,6 +27,13 @@ func newHoliday(s, e time.Time) (*Holiday, error) {
 	h := new(Holiday)
 	if s.After(e) {
 		return h, fmt.Errorf("start date %s after %s", dayShortFmt(s), dayShortFmt(e))
+	}
+	empty := time.Time{}
+	if s == empty {
+		return h, errors.New("start date not set")
+	}
+	if e == empty {
+		return h, errors.New("end date not set")
 	}
 	h.Start = s
 	h.End = e
@@ -56,16 +62,17 @@ func newHolidayFromStr(s, e string) (*Holiday, error) {
 	return newHoliday(st, et)
 }
 
-// holidaysFromURL is a struct suitable for decoding parameters provided
-// in a url, such as
-// `?Start=2022-12-18&End=2023-01-07&Start=2023-02-10&End=2023-02-15`
-type holidaysFromURL struct {
-	Start []time.Time
-	End   []time.Time
-}
-
 // HolidaysURLDecoder decodes a set of holidays provided as a URL.Query
 func HolidaysURLDecoder(input url.Values) ([]Holiday, error) {
+
+	// holidaysFromURL is a struct suitable for decoding parameters provided
+	// in a url, such as
+	// `?Start=2022-12-18&End=2023-01-07&Start=2023-02-10&End=2023-02-15`
+	type holidaysFromURL struct {
+		Start []time.Time
+		End   []time.Time
+	}
+
 	holsByURL := holidaysFromURL{}
 	hols := []Holiday{}
 
@@ -94,41 +101,18 @@ func HolidaysURLDecoder(input url.Values) ([]Holiday, error) {
 	return hols, err
 }
 
-// jsonTime is a struct for the json marshalling of time
-type jsonTime struct {
-	time.Time
-}
-
-// jsonHoliday provides a shadow struct for Holiday that allows for the
-// marshaling and unmarshaling of 2006-01-02 formatted ates
-type jsonHoliday struct {
-	Start jsonTime `json:"Start"` // start date
-	End   jsonTime `json:"End"`   // end date
-}
-
-// MarshalJSON marshals a jsonTime to 2006-01-02 format
-func (t jsonTime) MarshalJSON() ([]byte, error) {
-	// https://blog.gopheracademy.com/advent-2016/advanced-encoding-decoding/
-	return json.Marshal(t.Time.Format("2006-01-02"))
-}
-
-// UnmarshalJSON unmarshals a 2006-01-02 time to time.Time
-func (t *jsonTime) UnmarshalJSON(data []byte) error {
-	var err error
-	t.Time, err = time.Parse("2006-01-02", strings.Trim(string(data), `"`))
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
 // HolidaysJSONDecoder decodes a set of holidays provided as JSON
 func HolidaysJSONDecoder(input []byte) ([]Holiday, error) {
 
 	var hols []Holiday
-	var jsonHols []jsonHoliday
 
-	emptyTime := time.Time{}
+	// internal struct to convert from 2006-01-02 values by first
+	// converting to string
+	type jsonHoliday struct {
+		Start string
+		End   string
+	}
+	var jsonHols []jsonHoliday
 
 	err := json.Unmarshal(input, &jsonHols)
 	if err != nil {
@@ -137,11 +121,11 @@ func HolidaysJSONDecoder(input []byte) ([]Holiday, error) {
 	if len(jsonHols) < 1 {
 		return hols, nil
 	}
+
+	// make Holiday objects from each jsonHoliday in the slice
 	for _, j := range jsonHols {
-		if j.Start.Time == emptyTime {
-			return hols, errors.New("empty time value")
-		}
-		hol, err := newHoliday(j.Start.Time, j.End.Time)
+
+		hol, err := newHolidayFromStr(j.Start, j.End)
 		if err != nil {
 			return hols, err
 		}

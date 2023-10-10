@@ -1,8 +1,6 @@
 package trips
 
 import (
-	"bytes"
-	"encoding/json"
 	"net/url"
 	"strconv"
 	"testing"
@@ -30,22 +28,6 @@ func TestBasics(t *testing.T) {
 	if err == nil {
 		t.Error("error expected")
 	}
-
-	// test jsonHoliday encoding and decoding
-	var jh jsonHoliday
-	j := []byte(`{"Start":"2023-01-31","End":"2023-02-01"}`)
-	err = json.Unmarshal(j, &jh)
-	if err != nil {
-		t.Fatal(err)
-	}
-	j2, err := json.Marshal(jh)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !bytes.Equal(j, j2) {
-		t.Errorf("j %s != j2 %s", string(j), string(j2))
-	}
-
 }
 
 func TestMakeHolidays(t *testing.T) {
