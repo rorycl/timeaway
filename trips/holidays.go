@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"sort"
+	"strings"
 	"time"
 
 	"github.com/go-playground/form"
@@ -14,12 +16,15 @@ import (
 // Holiday describes a period of with a duration of at least one day
 // (when Start and End are the same date). A holiday End date may not be
 // before its Start.
-// The Holiday struct is also used to describe partial holidays for
-// `window.HolidayParts`.
+//
+// The Holiday struct is also used to describe partial holidays which
+// overlap the holiday under consideration for any calculation window in
+// Trips.calculate.
 type Holiday struct {
-	Start    time.Time `json:"Start"`                        // start date
-	End      time.Time `json:"End"`                          // end date
-	Duration int       `json:",omitempty" form:",omitempty"` // duration in days
+	Start          time.Time `json:"start"`                                // start date
+	End            time.Time `json:"end"`                                  // end date
+	Duration       int       `json:"duration,omitempty" form:",omitempty"` // duration in days
+	PartialHoliday *Holiday  `json:"overlap,omitempty"`                    // pointer to a partial holiday
 }
 
 // newHoliday returns a new Holiday from two dates (time.Time values)
@@ -132,9 +137,15 @@ func HolidaysJSONDecoder(input []byte) ([]Holiday, error) {
 
 // String returns a string representation of a holiday
 func (h Holiday) String() string {
-	return fmt.Sprintf(
-		"%s to %s (%d)", dayFmt(h.Start), dayFmt(h.End), h.Duration,
-	)
+	result := ""
+	tpl := "%s to %s (%d days)"
+	result = fmt.Sprintf(tpl, dayShortFmt(h.Start), dayShortFmt(h.End), h.Duration)
+	if h.PartialHoliday != nil {
+		p := *h.PartialHoliday
+		tpl = " [overlap %d days]"
+		result += fmt.Sprintf(tpl, p.Duration)
+	}
+	return result
 }
 
 // days returns the number of inclusive days between the start and end
@@ -150,30 +161,53 @@ func (h Holiday) days() int {
 // overlaps returns a pointer to a partial or full holiday if there is
 // an overlap with the provided dates, else a nil pointer
 func (h Holiday) overlaps(start, end time.Time) *Holiday {
-	partialTrip := new(Holiday)
+	partialHoliday := new(Holiday)
 	// no overlap
 	if h.Start.After(end) || h.End.Before(start) {
 		return nil
 	}
 	// contained
 	if h.Start.After(start) && h.End.Before(end) {
-		partialTrip.Start = h.Start
-		partialTrip.End = h.End
-		return partialTrip
+		partialHoliday.Start = h.Start
+		partialHoliday.End = h.End
+		return partialHoliday
 	}
 	// partial overlap
 	if h.Start.Before(start) || h.Start == start {
-		partialTrip.Start = start
+		partialHoliday.Start = start
 	} else {
-		partialTrip.Start = h.Start
+		partialHoliday.Start = h.Start
 	}
 	if h.End.After(end) || h.End == end {
-		partialTrip.End = end
+		partialHoliday.End = end
 	} else {
-		partialTrip.End = h.End
+		partialHoliday.End = h.End
 	}
-	partialTrip.Duration = partialTrip.days()
-	return partialTrip
+	partialHoliday.Duration = partialHoliday.days()
+	return partialHoliday
+}
+
+// HolidaysURLEncode url encodes a slice of Holiday ordered by holiday rather
+// than `net/url.Encode`'s sort by key
+func HolidaysURLEncode(hols []Holiday) string {
+	if len(hols) < 1 {
+		return ""
+	}
+	sort.SliceStable(hols, func(i, j int) bool {
+		return hols[i].Start.Before(hols[j].Start)
+	})
+	u := ""
+	counter := 0
+	tpl := "Start=%s&End=%s"
+	for _, h := range hols {
+		t := tpl
+		if counter > 0 {
+			t = "&" + t
+		}
+		u += fmt.Sprintf(t, h.Start.Format("2006-01-02"), h.End.Format("2006-01-02"))
+		counter++
+	}
+	return strings.TrimRight(u, "&")
 }
 
 // durationDays returns a duration for the number of days specified

@@ -196,3 +196,47 @@ func TestHolidaysFromJSON(t *testing.T) {
 		})
 	}
 }
+
+// test urlencoding of []Holiday
+func TestHolidayURLEncoding(t *testing.T) {
+
+	now, err := time.Parse("2006-01-02", "2023-06-01")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	testCases := []struct {
+		name  string
+		input []Holiday
+		want  string
+	}{
+		{
+			name:  "empty",
+			input: []Holiday{},
+			want:  "",
+		},
+		{
+			name: "2 holidays",
+			input: []Holiday{
+				Holiday{Start: now, End: now.Add(24 * time.Hour)},
+				Holiday{Start: now.Add(48 * time.Hour), End: now.Add(72 * time.Hour)},
+			},
+			want: "Start=2023-06-01&End=2023-06-02&Start=2023-06-03&End=2023-06-04",
+		},
+		{
+			name: "2 holidays needing sorting",
+			input: []Holiday{
+				Holiday{Start: now.Add(48 * time.Hour), End: now.Add(72 * time.Hour)},
+				Holiday{Start: now, End: now.Add(24 * time.Hour)},
+			},
+			want: "Start=2023-06-01&End=2023-06-02&Start=2023-06-03&End=2023-06-04",
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got, want := HolidaysURLEncode(tc.input), tc.want; got != want {
+				t.Errorf("\ngot  %s\nwant %s", got, want)
+			}
+		})
+	}
+}

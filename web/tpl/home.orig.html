@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+    * {font-family: Arial, Helvetica, sans-serif; font-size: 12pt;}
+    body {margin: 40px 40px; max-width: 860px}
+    h1 {font-size: 14pt}
+    h2 {font-size: 13pt}
+    label { display: inline-block; width: 50px }
+    input { width: 150px; margin-right: 20px; font-size: 11pt; }
+    button { font-size: 11pt; }
+    button.submit { color: blue }
+    ul { padding-left: 15px; margin-top: 0px; }
+    li { padding-top: 7px; }
+    #results { margin-top: 2em; }
+    #details { display: none;}
+    .rmv { color: red }
+    .breach-true { color: red }
+    p.pre-list { margin-bottom: 1px; }
+</style>
+<title>{{.Title}}</title>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+<script src="/js/htmx.min.js"></script>
+<script>
+// add additional trip fields when the button is pressed
+$(document).ready(function () {
+    var rowIdx = {{ len .InputDates }};
+    $('#addBtn').on('click', function () {
+    rowIdx++;
+    var contents = $(`
+<p id="p${rowIdx}">
+<label for="start">start:</label>
+<input type="date" class="start" name="Start" value="" min="2018-01-01" max="2033-01-01" required />
+<label for="start">end:</label>
+<input type="date" class="end" name="End" value="" min="2018-01-01" max="2033-01-01" required />
+<button class="rmv ignore" type="button" onclick="remover('p${rowIdx}')";>remove</button>
+</p>
+<div id="rpl"></div>`);
+    $('#rpl').replaceWith(contents);
+    });
+
+    // toggle further details 
+    $("#showdetails a").on('click', function(event){
+        event.preventDefault();
+        $("#details").toggle()
+    });
+
+    // use css instead to hide on load
+    // $("#details").hide()
+
+    // form capture function
+    // https://www.digitalocean.com/community/tutorials/submitting-ajax-forms-with-jquery
+    // https://stackoverflow.com/questions/4291005/jquery-get-all-input-from-specific-form
+    $("form").submit(function (event) {
+        var dates = {
+            Start : [],
+            End : [],
+        };
+        $("form#trip :input").each(function() {
+            var input = $(this); // This is the jquery object of the input
+            n = input.attr('name');
+            v = input.val();
+            if (!input.hasClass("ignore")) {
+                dates[n].push(v);
+            }
+        });
+        var postData = []
+        dates.Start.forEach((s, i) => {
+            var d = {};
+            d.Start = s;
+            d.End = dates.End[i];
+            postData.push(d);
+        });
+        // build url
+        // const newURL = new URL(window.location.href);
+        const newURL = new URL(window.location.href);
+        const newURLWithParams = new URL(newURL.origin + newURL.pathname);
+        dates.Start.forEach((s, i) => {
+            newURLWithParams.searchParams.append("Start", s);
+            newURLWithParams.searchParams.append("End", dates.End[i]);
+        });
+        // console.log(newURLWithParams.href);
+
+        // post a json representation of the postData to PostURL
+        $.ajax({
+            type: "POST",
+            url: "{{ .PostURL }}",
+            data: JSON.stringify(postData),
+            encode: true,
+            dataType: 'json',
+            crossDomain: true,
+            headers: {
+                'Access-Control-Allow-Origin': '*'
+            },
+        }).then(function(result) { // write success data to the results div
+            var data = result;
+            var partials = listBuilder(data.longestWindow.partialHolidays);
+            var holidays = listBuilder(data.holidays);
+            var breach = `${data.daysAway > 90 ? 'breach' : 'do not breach'}`
+            var contents = $(`
+<div id="results">
+<h2>Results</h2>
+<p class="breach-${data.breach}">These holidays ${breach} the 90 day in 180 rule.</p>
+<p>The longest length of compound holidays lasted ${data.daysAway} days for a window starting on ${dateToString(data.longestWindow.Start)} and ending on ${dateToString(data.longestWindow.End)}.</p>
+<p class="pre-list">The holidays within this window ran from:</p>${partials}</p>
+<hr />
+<p class="pre-list">The holidays under analysis were:</p>${holidays}</div>`);
+            $("#results").replaceWith(contents);
+        }).fail(function(result) { // write the failure to the results div
+            data = result.responseJSON;
+            var contents2 = $(`<div id="results"><h2>Results</h2><p>${data.Error}</p></div>`);
+            $("#results").replaceWith(contents2);
+        });
+        event.preventDefault();
+
+        // set the url in the window to allow saving with a bookmark
+        let stateObj = {};
+        window.history.pushState(stateObj, "trip calculator", newURLWithParams.href);
+
+    });
+});
+</script>
+
+<script>
+function listBuilder(dataList) {
+    var output = "<ul>";
+    for (i in dataList) {
+        let p = dataList[i];
+        let dayTpl = `${p.Duration > 1 ? 'days' : 'day'}`
+        output += "<li>";
+        output += `${dateToString(p.Start)} to ${dateToString(p.End)} (${p.Duration} ${dayTpl})`;
+        output += "</li>";
+    }
+    output += "</ul>";
+    return output;
+}
+</script>
+
+<script>
+// format a javascript date as a string
+function dateToString(d) {
+    const thisDate = new Date(d);
+    // return thisDate.toDateString();
+    var ds = thisDate.toLocaleDateString(); // typically 5/12/2020
+    const weekday = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+    var wd = weekday[thisDate.getDay()];
+    return wd + " " + ds;
+}
+</script>
+
+<script>
+// set end date to same as start date for a pair of dates
+$(document).on('focusout', "input[name$='Start']", function() {
+   var id=$(this).parent().attr('id');
+   let endInput = $('#'+id).find("input.end");
+   let startInput = $('#'+id).find("input.start");
+   if (endInput.val() != "" || startInput.val() == "") {
+       return; // return early if the end date is already set or start is empty
+   }
+   $(endInput).val($(startInput).val());
+});
+</script>
+
+<script>
+// remove field set
+function remover(val) {
+    $("#"+val).remove();
+};
+</script>
+
+</head>
+  
+<body>
+<h1>Calculator for British visits to the Schengen states</h1>
+
+<p>This small web app helps calculate if trips by British travellers conform with Regulation (EU) No 610/2013 of 26 June
+2013 which limits the total length of all trips to Schengen states to no more than 90 days in any 180 day period.</p>
+
+<h2>Background and method</h2>
+
+<p id="showdetails">Click <a href="">here</a> to show details of and background to the calculation method.</p>
+
+<div id="details">
+<p>According to the European Commission website (as at August 2023), Regulation No 610/2013 requires British travellers
+to the Schengen countries to visits of a maximum duration of 90 days in any 180 day period. The date of entry shall be
+considered as the first day of stay on the territory of the Member States and the date of exit shall be considered as
+the last day of stay on the territory of the Member States.</p>
+
+<p>Note that the non-EU member states Iceland, Liechtenstein, Norway and Switzerland are included in the Schengen group,
+while stays in Bulgaria, Croatia, Ireland, Romania and Cyprus are not considered as they are not presently in the
+group.</p>
+
+<p>
+For more details see the European Commission calculation manual viewable <a
+    href="https://ec.europa.eu/assets/home/visa-calculator/docs/short_stay_schengen_calculator_user_manual_en.pdf">
+    here</a>.
+</p>
+
+<p>The calculation uses a 180 day moving window over the trips provided to find the maximum length of days, inclusive of
+trip start and end dates, taken by the trips to learn if these breach the 90 day permissible length of stay. As noted
+below, trips cannot overlap in time. If you depart and arrive on the same day in two Schengen countries, consider the
+two trips a single trip.</p>
+</div>
+
+<h2>Make a calculation</h2>
+
+<p>Provide a list of past and possible future trips into the calculator to learn if these breach the 90 day in 180 day
+rule. The order of the trips isn't important, but they shouldn't overlap in time.</p>
+
+<form id="trip" action="http://127.0.0.1:8080/" method="post">
+<section>
+
+<!-- show dates in url -->
+{{ if .InputDates }}
+{{ range $index, $date := .InputDates }}
+<p id="p{{ $index }}">
+<label for="start">start:</label>
+<input type="date" class="start" name="Start" value="{{ $date.Start.Format "2006-01-02" }}" min="2018-01-01" max="2033-01-01" required />
+<label for="start">end:</label>
+<input type="date" class="end" name="End" value="{{ $date.End.Format "2006-01-02" }}" min="2018-01-01" max="2033-01-01" required />
+<button class="rmv ignore" type="button" onclick="remover('p{{ $index }}')";>remove</button>
+</p>
+{{ end }}
+{{ end }}
+{{ if not .InputDates }}
+<p id="p{{ len .InputDates }}">
+<label for="start">start:</label>
+<input type="date" class="start" name="Start" value="2023-01-01" min="2018-01-01" max="2033-01-01" required />
+<label for="start">end:</label>
+<input type="date" class="end" name="End" value="" min="2018-01-01" max="2033-01-01" required />
+<button class="rmv ignore" type="button" onclick="remover('p{{ len .InputDates }}')";>remove</button>
+</p>
+{{ end }}
+<div id="rpl"></div>
+<p>
+<button id="addBtn" class="ignore" name="button" type="button">add more trips</button>
+</p>
+<button class="submit ignore" type="submit">Calculate</button>
+</section>
+</form>
+
+<div id="results">
+</div>
+
+</body>
+</html>

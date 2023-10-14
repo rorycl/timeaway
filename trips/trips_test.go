@@ -86,7 +86,7 @@ func TestTrips(t *testing.T) {
 		t.Error("Expected breach to be false, got true")
 	}
 
-	if got, want := len(trips.Window.HolidayParts), 2; got != want {
+	if got, want := trips.window.Overlaps, 2; got != want {
 		t.Errorf("partial trips should be %d, got %d", got, want)
 	}
 
@@ -108,10 +108,6 @@ func TestTrips(t *testing.T) {
 
 	if got, want := checkTrips.DaysAway, trips.DaysAway; got != want {
 		t.Errorf("window days away should be %v got %v", got, want)
-	}
-
-	if len(checkTrips.Window.HolidayParts) != 2 {
-		t.Errorf("partial trips should be 2, got %d", len(checkTrips.Window.HolidayParts))
 	}
 
 	if len(checkTrips.Holidays) != 6 {
@@ -175,10 +171,6 @@ func TestTripsToBreach(t *testing.T) {
 
 	if checkTrips.DaysAway != trips.DaysAway {
 		t.Errorf("window days away should be %v got %v", trips.DaysAway, checkTrips.DaysAway)
-	}
-
-	if len(checkTrips.Window.HolidayParts) != 2 {
-		t.Errorf("partial trips should be 2, got %d", len(checkTrips.Window.HolidayParts))
 	}
 
 	if len(checkTrips.Holidays) != 6 {

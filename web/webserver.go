@@ -8,6 +8,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"text/template"
 	"time"
@@ -30,6 +31,9 @@ var (
 
 	// BaseURL is the base url for redirects, etc.
 	BaseURL string = ""
+
+	// tplBasePath is the working directory of the project's templates
+	tplBasePath string = "./web/tpl/"
 )
 
 // development/testing vars
@@ -67,6 +71,14 @@ func Serve(addr string, port string) {
 	// endpoint routing; gorilla mux is used because "/" in http.NewServeMux
 	// is a catch-all pattern
 	r := mux.NewRouter()
+	r.HandleFunc("/partials/details/show", partialDetailsShow)
+	r.HandleFunc("/partials/details/hide", partialDetailsHide)
+	r.HandleFunc("/partials/report", partialReport)
+	r.HandleFunc("/partials/nocontent", partialNoContent)
+	r.HandleFunc("/partials/addtrip", partialAddTrip)
+
+	r.HandleFunc("/js/htmx.min.js", JSHTMX)
+
 	r.HandleFunc("/", Home)
 	r.HandleFunc("/home", Home)
 	r.HandleFunc("/favicon.ico", Favicon)
@@ -126,18 +138,23 @@ func Home(w http.ResponseWriter, r *http.Request) {
 		log.Printf("holidays GET : %+v err : %v", holidays, err)
 	}
 
+	// find date 10 years from now for form limits
+	maxYear := time.Now().Year() + 10
+
 	data := struct {
 		Title      string
 		Address    string
 		Port       string
 		PostURL    string
 		InputDates []trips.Holiday
+		MaxYear    int
 	}{
 		"trip calculator",
 		ServerAddress,
 		ServerPort,
 		BaseURL + "/trips",
 		holidays,
+		maxYear,
 	}
 	err = t.Execute(w, data)
 	if err != nil {
@@ -155,7 +172,26 @@ func Favicon(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, favicon)
 }
 
-// trip is a POST endpoint receiving json dates from the form at Home,
+// // go:embed web/tpl/htmx.min.js
+// var htmx string
+
+// Favicon serves an svg favicon
+func JSHTMX(w http.ResponseWriter, r *http.Request) {
+	// http.ServeFile(w, r, "tpl/htmx.min.js")
+	w.Header().Set("Content-Type", "application/javascript")
+	f, err := os.Open(tplBasePath + "htmx.min.js")
+	if err != nil {
+		log.Printf("htmx file error %v", err)
+		return
+	}
+	_, err = io.Copy(w, f)
+	if err != nil {
+		log.Printf("htmx file copy error %v", err)
+		return
+	}
+}
+
+// Trips is a POST endpoint for JSON queries, receiving json dates,
 // turning this data into Holidays and then performing a calculation on
 // the data, finally returning the json result.
 func Trips(w http.ResponseWriter, r *http.Request) {
@@ -240,5 +276,103 @@ func Health(w http.ResponseWriter, r *http.Request) {
 	resp := map[string]string{"status": "up"}
 	if err := enc.Encode(resp); err != nil {
 		log.Print("health error: unable to encode response")
+	}
+}
+
+// partialWriter writes the partial file for inclusion to the
+// http.ResponseWriter or errors for partials not needing a template
+func partialWriter(w http.ResponseWriter, fp string) error {
+	// http.ServeFile(w, r, "tpl/partial-details.html")
+	f, err := os.Open(fp)
+	if err != nil {
+		log.Printf("partial open error for %v", err)
+		return err
+	}
+	_, err = io.Copy(w, f)
+	if err != nil {
+		log.Printf("partial write error for %s: %v", fp, err)
+		return err
+	}
+	return nil
+}
+
+// partialDetailsShow shows an information details partial
+func partialDetailsShow(w http.ResponseWriter, r *http.Request) {
+	_ = partialWriter(w, tplBasePath+"partial-details-show.html")
+}
+
+// partialDetailsHide shows the concise information details partial
+func partialDetailsHide(w http.ResponseWriter, r *http.Request) {
+	_ = partialWriter(w, tplBasePath+"partial-details-hide.html")
+}
+
+// partialNoContent returns no content
+func partialNoContent(w http.ResponseWriter, r *http.Request) {
+	_, _ = w.Write([]byte(""))
+}
+
+// partialAddTrip adds a trip button row
+func partialAddTrip(w http.ResponseWriter, r *http.Request) {
+	_ = partialWriter(w, tplBasePath+"partial-addtrip.html")
+}
+
+// partialReport shows the results of a form submission in html
+func partialReport(w http.ResponseWriter, r *http.Request) {
+
+	if r.Method != "POST" {
+		w.WriteHeader(http.StatusBadRequest)
+		log.Print("endpoint only accepts POST requests, got", r.Method)
+		return
+	}
+
+	// read body
+	body, err := io.ReadAll(r.Body)
+	defer r.Body.Close()
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		log.Print("body reading error", err)
+		return
+	}
+	if inDevelopment {
+		log.Println("body content:", string(body))
+	}
+
+	// extract Holidays from POSTed htmx form
+	urlVals, err := url.ParseQuery(string(body))
+	if err != nil {
+		log.Fatal(err)
+	}
+	holidays, err := trips.HolidaysURLDecoder(urlVals)
+	if inDevelopment {
+		log.Printf("holidays GET : %+v err : %v", holidays, err)
+	}
+	if err != nil {
+		_, _ = w.Write([]byte(err.Error()))
+		log.Print("form data decoding error", err)
+		return
+	}
+	if len(holidays) < 1 {
+		_, _ = w.Write([]byte("no holidays were found"))
+		log.Print("no holidays were found")
+		return
+	}
+	if inDevelopment {
+		log.Println("holidays", holidays)
+	}
+
+	// perform the calculation
+	var trs *trips.Trips
+
+	// push htmx browser url to client's browser history
+	w.Header().Set("HX-Push-Url", BaseURL+"/?"+trips.HolidaysURLEncode(holidays))
+
+	// error captured in trs.Error
+	trs, _ = calculate(holidays)
+	log.Println("Error ", trs.Error)
+	t := template.Must(template.New("partial-report.html").ParseFiles(tplBasePath + "partial-report.html"))
+	err = t.Execute(w, trs)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, "template writing problem : %s", err.Error())
 	}
 }

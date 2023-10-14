@@ -1,0 +1,33 @@
+<div id="results">
+<h2>Calculation results</h2>
+
+{{ if .Error }}
+<p>An error occurred:<br />
+{{ .Error }}</p>
+
+{{ else }}
+{{ if .Breach }}
+<p>The planned trips <span class="breached">breached</span> the 90 days in 180 day rule with <b>{{ .DaysAway }}</b> days away.</p>
+{{ else }}
+<p>The planned trips do <b>not</b> breach the 90 days in 180 day rule with only <b>{{ .DaysAway }}</b> days away.</p>
+{{ end }}{{/* end of breach test */}}
+{{ if .DaysAway  }}
+<p>The maximum days away were for a 180 day window from {{ .Start.Format "Monday 02/01/2006" }} to {{ .End.Format "Monday 02/01/2006" }}.<br />
+The trips in this calculation are:</p>
+<ol>
+    {{- range $hol := .Holidays }}
+    <li>{{ $hol.Start.Format "Monday 02/01/2006" }} to {{ $hol.End.Format "Monday 02/01/2006" }} ({{ $hol.Duration }} {{ if gt $hol.Duration 1 }}days{{ else }}day{{ end }})
+    {{ if $hol.PartialHoliday }}
+        {{ if eq $hol.Duration $hol.PartialHoliday.Duration }}
+        <br />fully covered by the window.
+        {{ else }}
+        <br />parially covered by the window from {{ $hol.PartialHoliday.Start.Format "Monday 02/01/2006" }} for {{ $hol.PartialHoliday.Duration }} days.
+        {{ end }}
+    {{ else }}
+    <br />not covered by the window.
+    {{ end }}{{/* end partialholiday check */}}
+    {{- end }}</li>
+</ol>
+{{- end }} {{/* end not daysaway */}}
+{{- end }} {{/* end not error */}}
+</div>

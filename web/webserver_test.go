@@ -71,9 +71,9 @@ func TestFavicon(t *testing.T) {
 	}
 }
 
+// TestTripsEndpoint tests the JSON endpoint; note that the main
+// webserver package level func vars are swapped out.
 func TestTripsEndpoint(t *testing.T) {
-
-	// swap out the webserver development/testing package level func vars
 
 	// holidayJSONDecoder makes holidays from a POSTED json body
 	holidayJSONDecoder = func(b []byte) ([]trips.Holiday, error) {
@@ -160,6 +160,39 @@ func TestTripsEndpoint(t *testing.T) {
 						}
 					}
 			*/
+		})
+	}
+}
+
+// TestPartialEndpoints tests the partials used for htmx partial
+// rendering
+func TestPartialEndpoints(t *testing.T) {
+
+	tplBasePath = "./tpl/" // change test template path
+
+	testCases := []struct {
+		name       string
+		method     string
+		fn         func(w http.ResponseWriter, r *http.Request)
+		endpoint   string
+		statusCode int
+	}{
+		{"partialDetailsShow", http.MethodGet, partialDetailsShow, "/partials/details/show", 200},
+		{"partialDetailsHide", http.MethodGet, partialDetailsHide, "/partials/details/hide", 200},
+		{"partialNoContent", http.MethodGet, partialNoContent, "/partials/nocontent", 200},
+		{"partialAddTrip", http.MethodGet, partialAddTrip, "/partials/addtrip", 200},
+		{"partialReport", http.MethodGet, partialReport, "/partials/report", http.StatusBadRequest},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			r := httptest.NewRequest(tc.method, "http://example.com/"+tc.endpoint, nil)
+			w := httptest.NewRecorder()
+			tc.fn(w, r)
+			res := w.Result()
+			if got, want := tc.statusCode, res.StatusCode; got != want {
+				t.Errorf("got %v != want %v", got, want)
+			}
 		})
 	}
 }

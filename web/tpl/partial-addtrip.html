@@ -1,0 +1,8 @@
+<p>
+<label>start:</label>
+<input _="on load set i to previous <input/> if i.value is not null put i.value into my value" type="date" class="start" name="Start" value="2023-01-01" min="2018-01-01" max="2033-01-01" required />
+<label>end:</label>
+<input _="on click 1 or focus 1 set i to previous <input/> put i.value into my value" type="date" class="end" name="End" value="" min="2018-01-01" max="2033-01-01" required />
+<button type="button" hx-trigger="click" hx-get="/partials/nocontent" hx-target="closest p" hx-swap="outerHTML">remove</button>
+</p>
+<div id="rpl"></div>

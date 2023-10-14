@@ -16,6 +16,7 @@ require (
 )
 
 require (
+	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/felixge/httpsnoop v1.0.3 // indirect
 	golang.org/x/sys v0.13.0 // indirect
 	gopkg.in/go-playground/assert.v1 v1.2.1 // indirect
