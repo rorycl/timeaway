@@ -9,6 +9,7 @@ import (
 	"log"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -18,6 +19,10 @@ import (
 
 // Test Home page returns a 200
 func TestHome(t *testing.T) {
+
+	// home uses templates fs
+	DirFS = &fileSystem{}
+	DirFS.TplFS = os.DirFS("templates")
 
 	r := httptest.NewRequest(http.MethodGet, "http://example.com/home", nil)
 	w := httptest.NewRecorder()
@@ -62,11 +67,20 @@ func TestHealth(t *testing.T) {
 
 // Favicon page returns a 200
 func TestFavicon(t *testing.T) {
-	r := httptest.NewRequest(http.MethodGet, "http://example.com/favicon.ico", nil)
-	w := httptest.NewRecorder()
-	Home(w, r)
-	res := w.Result()
-	if want, got := 200, res.StatusCode; want != got {
+
+	// favicon uses the static fs
+	DirFS = &fileSystem{}
+	DirFS.StaticFS = os.DirFS("static")
+
+	h := http.StripPrefix("/static/", http.FileServer(http.FS(DirFS.StaticFS)))
+	server := httptest.NewServer(h)
+	defer server.Close()
+
+	result, err := http.Get(server.URL + "/static/favicon.svg")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want, got := 200, result.StatusCode; want != got {
 		t.Errorf("expected status %d, got %d", want, got)
 	}
 }
@@ -151,15 +165,6 @@ func TestTripsEndpoint(t *testing.T) {
 				t.Errorf("expected status %d, got %d", tc.statusCode, res.StatusCode)
 			}
 
-			/*
-				responseBody := string(data)
-				fmt.Println(responseBody)
-					for _, w := range tc.want {
-						if !strings.Contains(responseBody, w) {
-							t.Errorf("body %s did not contain %s", responseBody, w)
-						}
-					}
-			*/
 		})
 	}
 }
@@ -168,7 +173,9 @@ func TestTripsEndpoint(t *testing.T) {
 // rendering
 func TestPartialEndpoints(t *testing.T) {
 
-	tplBasePath = "./tpl/" // change test template path
+	// the partials use the templates endpoint
+	DirFS = &fileSystem{}
+	DirFS.TplFS = os.DirFS("template")
 
 	testCases := []struct {
 		name       string
@@ -177,11 +184,11 @@ func TestPartialEndpoints(t *testing.T) {
 		endpoint   string
 		statusCode int
 	}{
-		{"partialDetailsShow", http.MethodGet, partialDetailsShow, "/partials/details/show", 200},
-		{"partialDetailsHide", http.MethodGet, partialDetailsHide, "/partials/details/hide", 200},
-		{"partialNoContent", http.MethodGet, partialNoContent, "/partials/nocontent", 200},
-		{"partialAddTrip", http.MethodGet, partialAddTrip, "/partials/addtrip", 200},
-		{"partialReport", http.MethodGet, partialReport, "/partials/report", http.StatusBadRequest},
+		{"PartialDetailsShow", http.MethodGet, PartialDetailsShow, "/partials/details/show", 200},
+		{"PartialDetailsHide", http.MethodGet, PartialDetailsHide, "/partials/details/hide", 200},
+		{"PartialNoContent", http.MethodGet, PartialNoContent, "/partials/nocontent", 200},
+		{"PartialAddTrip", http.MethodGet, PartialAddTrip, "/partials/addtrip", 200},
+		{"PartialReport", http.MethodGet, PartialReport, "/partials/report", http.StatusBadRequest},
 	}
 
 	for _, tc := range testCases {

@@ -28,6 +28,12 @@ HEREGOPATH := `go env GOPATH`
 # 	sudo tar -C /usr/local -xzf go$(GO_VERSION).linux-amd64.tar.gz
 # 	rm go$(GO_VERSION).linux-amd64.tar.gz
 
+update-javascript:
+	# htmx
+	wget -o web/static/htmx.min.js https://unpkg.com/htmx.org@1.9.6/dist/htmx.min.js
+	# hyperscript (as at 15 October 2023)
+	wget -o web/static/htmx.min.js https://unpkg.com/hyperscript.org@0.9.11
+
 build:
 	go test ./... && echo "---ok---" && go build -o timeaway cmd/main.go
 

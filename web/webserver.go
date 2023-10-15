@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"log"
 	"net/http"
 	"net/url"
@@ -31,9 +32,6 @@ var (
 
 	// BaseURL is the base url for redirects, etc.
 	BaseURL string = ""
-
-	// tplBasePath is the working directory of the project's templates
-	tplBasePath string = "./web/tpl/"
 )
 
 // development/testing vars
@@ -48,9 +46,17 @@ var (
 
 	// tripsJSONMarshall sets the holiday marshaller
 	tripsJSONMarshal func(v any) ([]byte, error) = json.Marshal
+)
 
+// development flags and static and template directory locations
+var (
 	// production is default; set inDevelopment to true with build tag
-	inDevelopment bool = false
+	inDevelopment bool   = false
+	staticDirDev  string = "web/static"
+	tplDirDev     string = "web/templates"
+	staticDir     string = "static"
+	tplDir        string = "templates"
+	DirFS         *fileSystem
 )
 
 // Serve runs the web server on the specified address and port
@@ -68,20 +74,40 @@ func Serve(addr string, port string) {
 		ServerPort = port
 	}
 
+	// setup the filesystem for templates or static files, depending on
+	// development (filesystem) or not (embedded)
+	var err error
+	if inDevelopment {
+		DirFS, err = NewFileSystem(inDevelopment, tplDirDev, staticDirDev)
+	} else {
+		log.Printf("%t %s %s", inDevelopment, tplDir, staticDir)
+		DirFS, err = NewFileSystem(inDevelopment, tplDir, staticDir)
+	}
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	// endpoint routing; gorilla mux is used because "/" in http.NewServeMux
 	// is a catch-all pattern
 	r := mux.NewRouter()
-	r.HandleFunc("/partials/details/show", partialDetailsShow)
-	r.HandleFunc("/partials/details/hide", partialDetailsHide)
-	r.HandleFunc("/partials/report", partialReport)
-	r.HandleFunc("/partials/nocontent", partialNoContent)
-	r.HandleFunc("/partials/addtrip", partialAddTrip)
 
-	r.HandleFunc("/js/htmx.min.js", JSHTMX)
+	// attach static dynamic file system to the http.FileServer
+	// https://pkg.go.dev/github.com/gorilla/mux#section-readme :Static Files
+	r.PathPrefix("/static/").Handler(
+		http.StripPrefix("/static/",
+			http.FileServer(http.FS(DirFS.StaticFS))),
+	)
 
+	// partials
+	r.HandleFunc("/partials/details/show", PartialDetailsShow)
+	r.HandleFunc("/partials/details/hide", PartialDetailsHide)
+	r.HandleFunc("/partials/report", PartialReport)
+	r.HandleFunc("/partials/nocontent", PartialNoContent)
+	r.HandleFunc("/partials/addtrip", PartialAddTrip)
+
+	// main routes
 	r.HandleFunc("/", Home)
 	r.HandleFunc("/home", Home)
-	r.HandleFunc("/favicon.ico", Favicon)
 	r.HandleFunc("/trips", Trips)
 	r.HandleFunc("/health", Health)
 
@@ -115,21 +141,18 @@ func Serve(addr string, port string) {
 	}
 	log.Printf("serving on %s:%s", addr, port)
 
-	err := server.ListenAndServe()
+	err = server.ListenAndServe()
 	if err != nil {
 		log.Printf("fatal server error: %v", err)
 	}
 }
 
-//go:embed tpl/home.html
-var homeTemplate string
-
 // Home is the home page
 func Home(w http.ResponseWriter, r *http.Request) {
 
-	t := template.Must(template.New("home.html").Parse(homeTemplate))
-	if inDevelopment {
-		t = template.Must(template.New("home.html").ParseFiles("web/tpl/home.html"))
+	t, err := template.ParseFS(DirFS.TplFS, "home.html")
+	if err != nil {
+		log.Fatal(err)
 	}
 
 	// retrieve holidays, if any, ignoring errors
@@ -138,56 +161,23 @@ func Home(w http.ResponseWriter, r *http.Request) {
 		log.Printf("holidays GET : %+v err : %v", holidays, err)
 	}
 
-	// find date 10 years from now for form limits
-	maxYear := time.Now().Year() + 10
-
 	data := struct {
 		Title      string
 		Address    string
 		Port       string
 		PostURL    string
 		InputDates []trips.Holiday
-		MaxYear    int
 	}{
 		"trip calculator",
 		ServerAddress,
 		ServerPort,
 		BaseURL + "/trips",
 		holidays,
-		maxYear,
 	}
 	err = t.Execute(w, data)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, "template writing problem : %s", err.Error())
-	}
-}
-
-//go:embed tpl/favicon.svg
-var favicon string
-
-// Favicon serves an svg favicon
-func Favicon(w http.ResponseWriter, r *http.Request) {
-	// http.ServeFile(w, r, "favicon.svg")
-	fmt.Fprint(w, favicon)
-}
-
-// // go:embed web/tpl/htmx.min.js
-// var htmx string
-
-// Favicon serves an svg favicon
-func JSHTMX(w http.ResponseWriter, r *http.Request) {
-	// http.ServeFile(w, r, "tpl/htmx.min.js")
-	w.Header().Set("Content-Type", "application/javascript")
-	f, err := os.Open(tplBasePath + "htmx.min.js")
-	if err != nil {
-		log.Printf("htmx file error %v", err)
-		return
-	}
-	_, err = io.Copy(w, f)
-	if err != nil {
-		log.Printf("htmx file copy error %v", err)
-		return
 	}
 }
 
@@ -279,11 +269,20 @@ func Health(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// partialWriter writes the partial file for inclusion to the
-// http.ResponseWriter or errors for partials not needing a template
-func partialWriter(w http.ResponseWriter, fp string) error {
-	// http.ServeFile(w, r, "tpl/partial-details.html")
-	f, err := os.Open(fp)
+// partialWriter writes the partial file at path/fp (via an fs.FS) for
+// inclusion to the http.ResponseWriter or errors for partials not
+// needing a template
+func partialWriter(w http.ResponseWriter, path, fp string) error {
+	var m fs.FS
+	switch path {
+	case "templates":
+		m = DirFS.TplFS
+	case "static":
+		m = DirFS.StaticFS
+	default:
+		return fmt.Errorf("template dir %s not known", path)
+	}
+	f, err := m.Open(fp)
 	if err != nil {
 		log.Printf("partial open error for %v", err)
 		return err
@@ -296,28 +295,28 @@ func partialWriter(w http.ResponseWriter, fp string) error {
 	return nil
 }
 
-// partialDetailsShow shows an information details partial
-func partialDetailsShow(w http.ResponseWriter, r *http.Request) {
-	_ = partialWriter(w, tplBasePath+"partial-details-show.html")
+// PartialDetailsShow shows an information details partial
+func PartialDetailsShow(w http.ResponseWriter, r *http.Request) {
+	_ = partialWriter(w, "templates", "partial-details-show.html")
 }
 
-// partialDetailsHide shows the concise information details partial
-func partialDetailsHide(w http.ResponseWriter, r *http.Request) {
-	_ = partialWriter(w, tplBasePath+"partial-details-hide.html")
+// PartialDetailsHide shows the concise information details partial
+func PartialDetailsHide(w http.ResponseWriter, r *http.Request) {
+	_ = partialWriter(w, "templates", "partial-details-hide.html")
 }
 
-// partialNoContent returns no content
-func partialNoContent(w http.ResponseWriter, r *http.Request) {
+// PartialNoContent returns no content
+func PartialNoContent(w http.ResponseWriter, r *http.Request) {
 	_, _ = w.Write([]byte(""))
 }
 
-// partialAddTrip adds a trip button row
-func partialAddTrip(w http.ResponseWriter, r *http.Request) {
-	_ = partialWriter(w, tplBasePath+"partial-addtrip.html")
+// PartialAddTrip adds a trip button row
+func PartialAddTrip(w http.ResponseWriter, r *http.Request) {
+	_ = partialWriter(w, "templates", "partial-addtrip.html")
 }
 
-// partialReport shows the results of a form submission in html
-func partialReport(w http.ResponseWriter, r *http.Request) {
+// PartialReport shows the results of a form submission in html
+func PartialReport(w http.ResponseWriter, r *http.Request) {
 
 	if r.Method != "POST" {
 		w.WriteHeader(http.StatusBadRequest)
@@ -369,7 +368,9 @@ func partialReport(w http.ResponseWriter, r *http.Request) {
 	// error captured in trs.Error
 	trs, _ = calculate(holidays)
 	log.Println("Error ", trs.Error)
-	t := template.Must(template.New("partial-report.html").ParseFiles(tplBasePath + "partial-report.html"))
+
+	t := template.Must(template.ParseFS(DirFS.TplFS, "partial-report.html"))
+	// t := template.Must(template.New("partial-report.html").ParseFiles(tplBasePath + "partial-report.html"))
 	err = t.Execute(w, trs)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)

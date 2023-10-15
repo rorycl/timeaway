@@ -22,12 +22,27 @@ func init() {
 // endpoints is discussed at
 // https://medium.com/google-cloud/hack-use-cloud-functions-as-a-webserver-with-golang-42edc7935247
 func GCPServer(w http.ResponseWriter, r *http.Request) {
+
 	m := mux.NewRouter()
+
+	// static
+	m.PathPrefix("/static/").Handler(
+		http.StripPrefix("/static/",
+			http.FileServer(http.FS(web.DirFS.StaticFS))),
+	)
+
+	// partials
+	m.HandleFunc("/partials/details/show", web.PartialDetailsShow)
+	m.HandleFunc("/partials/details/hide", web.PartialDetailsHide)
+	m.HandleFunc("/partials/report", web.PartialReport)
+	m.HandleFunc("/partials/nocontent", web.PartialNoContent)
+	m.HandleFunc("/partials/addtrip", web.PartialAddTrip)
+
+	// main routes
 	m.HandleFunc("/", web.Home)
 	m.HandleFunc("/home", web.Home)
-	m.HandleFunc("/favicon.ico", web.Favicon)
-	m.HandleFunc("/favicon.ico", web.Favicon)
 	m.HandleFunc("/trips", web.Trips)
 	m.HandleFunc("/health", web.Health)
+
 	m.ServeHTTP(w, r)
 }
