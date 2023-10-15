@@ -80,7 +80,6 @@ func Serve(addr string, port string) {
 	if inDevelopment {
 		DirFS, err = NewFileSystem(inDevelopment, tplDirDev, staticDirDev)
 	} else {
-		log.Printf("%t %s %s", inDevelopment, tplDir, staticDir)
 		DirFS, err = NewFileSystem(inDevelopment, tplDir, staticDir)
 	}
 	if err != nil {
