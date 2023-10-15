@@ -1,6 +1,6 @@
 # timeaway
 
-[![CI/CD](https://github.com/rorycl/timeaway/actions/workflows/pushtag.yml/badge.svg)](https://github.com/rorycl/timeaway/actions/workflows/pushtag.yml)
+[![test, lint, release and deploy](https://github.com/rorycl/timeaway/actions/workflows/workflow-pushtag.yml/badge.svg)](https://github.com/rorycl/timeaway/actions/workflows/workflow-pushtag.yml)
 
 version v0.6.0 : 15 October 2023
 
