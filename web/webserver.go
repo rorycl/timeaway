@@ -169,13 +169,13 @@ func Home(w http.ResponseWriter, r *http.Request) {
 		Title      string
 		Address    string
 		Port       string
-		PostURL    string
+		BaseURL    string
 		InputDates []trips.Holiday
 	}{
 		"trip calculator",
 		ServerAddress,
 		ServerPort,
-		BaseURL + "/trips",
+		BaseURL,
 		holidays,
 	}
 	err = t.Execute(w, data)

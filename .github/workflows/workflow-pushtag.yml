@@ -107,5 +107,5 @@ jobs:
       - id: test
         name: test endpoint with curl -Is
         run: |
-          [ "$(curl -Is https://us-central1-github-timeaway-399312.cloudfunctions.net/timeaway/ | head -n 1 | cut -d " " -f 2)" == "500" ]
+          [ "$(curl -Is https://us-central1-github-timeaway-399312.cloudfunctions.net/timeaway/ | head -n 1 | cut -d " " -f 2)" == "200" ]
 
