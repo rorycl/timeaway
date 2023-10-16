@@ -6,6 +6,7 @@
 package faas
 
 import (
+	"log"
 	"net/http"
 
 	"github.com/gorilla/mux"
@@ -22,6 +23,10 @@ func init() {
 // endpoints is discussed at
 // https://medium.com/google-cloud/hack-use-cloud-functions-as-a-webserver-with-golang-42edc7935247
 func GCPServer(w http.ResponseWriter, r *http.Request) {
+
+	// setup the filesystem
+	web.SetupFS()
+	log.Println("dirfs: ", web.DirFS.TplFS, web.DirFS.StaticFS)
 
 	m := mux.NewRouter()
 

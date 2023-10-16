@@ -59,6 +59,20 @@ var (
 	DirFS         *fileSystem
 )
 
+// SetupFSsetup the filesystem for templates or static files, depending on
+// development (filesystem) or not (embedded)
+func SetupFS() {
+	var err error
+	if inDevelopment {
+		DirFS, err = NewFileSystem(inDevelopment, tplDirDev, staticDirDev)
+	} else {
+		DirFS, err = NewFileSystem(inDevelopment, tplDir, staticDir)
+	}
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
 // Serve runs the web server on the specified address and port
 func Serve(addr string, port string) {
 
@@ -74,17 +88,8 @@ func Serve(addr string, port string) {
 		ServerPort = port
 	}
 
-	// setup the filesystem for templates or static files, depending on
-	// development (filesystem) or not (embedded)
-	var err error
-	if inDevelopment {
-		DirFS, err = NewFileSystem(inDevelopment, tplDirDev, staticDirDev)
-	} else {
-		DirFS, err = NewFileSystem(inDevelopment, tplDir, staticDir)
-	}
-	if err != nil {
-		log.Fatal(err)
-	}
+	// setup the filesystem
+	SetupFS()
 
 	// endpoint routing; gorilla mux is used because "/" in http.NewServeMux
 	// is a catch-all pattern
@@ -140,7 +145,7 @@ func Serve(addr string, port string) {
 	}
 	log.Printf("serving on %s:%s", addr, port)
 
-	err = server.ListenAndServe()
+	err := server.ListenAndServe()
 	if err != nil {
 		log.Printf("fatal server error: %v", err)
 	}
@@ -366,7 +371,6 @@ func PartialReport(w http.ResponseWriter, r *http.Request) {
 
 	// error captured in trs.Error
 	trs, _ = calculate(holidays)
-	log.Println("Error ", trs.Error)
 
 	t := template.Must(template.ParseFS(DirFS.TplFS, "partial-report.html"))
 	// t := template.Must(template.New("partial-report.html").ParseFiles(tplBasePath + "partial-report.html"))
