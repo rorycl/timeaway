@@ -20,8 +20,8 @@
     .underline { color: blue; text-decoration: underline; cursor: pointer}
 </style>
 <title>{{.Title}}</title>
-<script src="{{ .BaseURL }}/static/htmx.min.js"></script>
-<script src="{{ .BaseURL }}/static/hyperscript.js"></script>
+<script src="./static/htmx.min.js"></script>
+<script src="./static/hyperscript.js"></script>
 </head>
   
 <body>
@@ -34,7 +34,7 @@ more than 90 days in any 180 day period.</p>
 <h2>Background and method</h2>
 
 <div id="showDetails">
-<div hx-trigger="load" hx-get="{{ .BaseURL }}/partials/details/hide"></div>
+<div hx-trigger="load" hx-get="./partials/details/hide"></div>
 </div>
 
 <h2>Make a calculation</h2>
@@ -43,7 +43,7 @@ more than 90 days in any 180 day period.</p>
 rule. The order of the trips isn't important, but they shouldn't overlap in time. As noted in the details above, if they
 do overlap, consider the trips a single trip for the purposes of the calculator, or split them on adjoining days.</p>
 
-<form id="trip" hx-post="{{ .BaseURL }}/partials/report" hx-trigger="submit" hx-target="#results">
+<form id="trip" hx-post="./partials/report" hx-trigger="submit" hx-target="#results">
 <section>
 
 {{ if .InputDates }}
@@ -53,17 +53,17 @@ do overlap, consider the trips a single trip for the purposes of the calculator,
 <input type="date" class="start" name="Start" value="{{ $date.Start.Format "2006-01-02" }}" min="2018-01-01" max="2033-01-01" required />
 <label>end:</label>
 <input type="date" class="end" name="End" value="{{ $date.End.Format "2006-01-02" }}" min="2018-01-01" max="2033-01-01" required />
-<button type="button" hx-trigger="click" hx-get="{{ .BaseURL }}/partials/nocontent" hx-target="closest p" hx-swap="outerHTML">remove</button>
+<button type="button" hx-trigger="click" hx-get="./partials/nocontent" hx-target="closest p" hx-swap="outerHTML">remove</button>
 </p>
 {{ end }}
 {{ end }}
 {{ if not .InputDates }}
-<p hx-trigger="load" hx-get="{{ .BaseURL }}/partials/addtrip" hx-target="closest p" hx-swap="outerHTML">
+<p hx-trigger="load" hx-get="./partials/addtrip" hx-target="closest p" hx-swap="outerHTML">
 </p>
 {{ end }}
 <div id="rpl"></div>
 <p>
-<button type="button" hx-trigger="click" hx-get="{{ .BaseURL }}/partials/addtrip" hx-target="#rpl" hx-swap="outerHTML">add more trips</button>
+<button type="button" hx-trigger="click" hx-get="./partials/addtrip" hx-target="#rpl" hx-swap="outerHTML">add more trips</button>
 </p>
 <button class="submit" type="submit">Calculate</button>
 </section>
