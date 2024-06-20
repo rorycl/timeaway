@@ -17,21 +17,7 @@ jobs:
       - name: set up go
         uses: actions/setup-go@v4
         with:
-          go-version: '1.21'
+          go-version: '1.22'
       - name: test
         run: go test -v ./...
         # run: make test
-      # use this option to share coverage reports with team members
-      # - name: coverage check
-      #   run: make coverage
-      # - name: make report
-      #   run: make report
-      # - name: copy files
-      #   run: |
-      #     mkdir reports
-      #     cp cover.html reports/
-      # - name: archive
-      #   uses: actions/upload-artifact@v3
-      #   with:
-      #     name: reports
-      #     path: reports
