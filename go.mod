@@ -1,6 +1,6 @@
 module github.com/rorycl/timeaway
 
-go 1.21
+go 1.22
 
 replace github.com/rorycl/timeaway/trips => ./trips
 
@@ -10,14 +10,15 @@ replace github.com/rorycl/timeaway/cmd => ./cmd
 
 require (
 	github.com/go-playground/form v3.1.4+incompatible
-	github.com/gorilla/handlers v1.5.1
-	github.com/gorilla/mux v1.8.0
-	github.com/jessevdk/go-flags v1.5.0
+	github.com/gorilla/handlers v1.5.2
+	github.com/gorilla/mux v1.8.1
+	github.com/jessevdk/go-flags v1.6.1
 )
 
 require (
+	github.com/NYTimes/gziphandler v1.1.1 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
-	github.com/felixge/httpsnoop v1.0.3 // indirect
-	golang.org/x/sys v0.13.0 // indirect
+	github.com/felixge/httpsnoop v1.0.4 // indirect
+	golang.org/x/sys v0.21.0 // indirect
 	gopkg.in/go-playground/assert.v1 v1.2.1 // indirect
 )

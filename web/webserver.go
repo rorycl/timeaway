@@ -16,6 +16,7 @@ import (
 
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
+
 	"github.com/rorycl/timeaway/trips"
 )
 
@@ -127,9 +128,15 @@ func Serve(addr string, port string) {
 		return handlers.RecoveryHandler()(handler)
 	}
 
+	// compression handler
+	compressor := func(handler http.Handler) http.Handler {
+		return handlers.CompressHandler(handler)
+	}
+
 	// attach middleware
 	r.Use(bodyLimitMiddleware)
 	r.Use(logging)
+	r.Use(compressor)
 	r.Use(recovery)
 
 	// configure server options
