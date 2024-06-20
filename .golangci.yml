@@ -3,7 +3,7 @@ linters:
     - gosec
 
 output:
-  format: colored-line-number
+  formats: colored-line-number
 
   # print lines of code with issue, default is true
   print-issued-lines: false

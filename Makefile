@@ -3,7 +3,7 @@
 
 SHELL=/bin/bash
 
-GO_VERSION := 1.21  # <1>
+GO_VERSION := 1.22  # <1>
 
 COVERAGE_AMT := 60  # should be 80
 
@@ -29,10 +29,10 @@ HEREGOPATH := `go env GOPATH`
 # 	rm go$(GO_VERSION).linux-amd64.tar.gz
 
 update-javascript:
-	# htmx
-	wget -o web/static/htmx.min.js https://unpkg.com/htmx.org@1.9.6/dist/htmx.min.js
-	# hyperscript (as at 15 October 2023)
-	wget -o web/static/htmx.min.js https://unpkg.com/hyperscript.org@0.9.11
+	# htmx (as at 20 June 2024)
+	wget -o web/static/htmx.min.js https://unpkg.com/browse/htmx.org@2.0.0/dist/htmx.min.js
+	# hyperscript (as at 20 June 2024)
+	wget -o web/static/hyperscript.min.js https://unpkg.com/hyperscript.org@0.9.12/dist/_hyperscript.min.js
 
 build:
 	go test ./... && echo "---ok---" && go build -o timeaway cmd/main.go
