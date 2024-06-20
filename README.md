@@ -2,7 +2,7 @@
 
 [![test, lint, release and deploy](https://github.com/rorycl/timeaway/actions/workflows/workflow-pushtag.yml/badge.svg)](https://github.com/rorycl/timeaway/actions/workflows/workflow-pushtag.yml)
 
-version v0.6.4 : 20 June 2024
+version v0.6.5 : 20 June 2024 (update to go 1.22, htmx 2.0)
 
 A small web app to calculate if the compound length of trips to Schengen
 countries by non-EU visitors conform with Regulation (EU) No 610/2013
