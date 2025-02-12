@@ -16,9 +16,7 @@ require (
 )
 
 require (
-	github.com/NYTimes/gziphandler v1.1.1 // indirect
-	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
-	golang.org/x/sys v0.21.0 // indirect
+	golang.org/x/sys v0.30.0 // indirect
 	gopkg.in/go-playground/assert.v1 v1.2.1 // indirect
 )
