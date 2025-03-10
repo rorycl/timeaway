@@ -1,7 +1,5 @@
 # timeaway
 
-[![test, lint, release and deploy](https://github.com/rorycl/timeaway/actions/workflows/workflow-pushtag.yml/badge.svg)](https://github.com/rorycl/timeaway/actions/workflows/workflow-pushtag.yml)
-
 version v0.6.5 : 20 June 2024 (update to go 1.22, htmx 2.0)
 
 A small web app to calculate if the compound length of trips to Schengen
@@ -15,12 +13,15 @@ page](https://www.gov.uk/travel-to-eu-schengen-area).
 
 ## Run It
 
-Run the provided web app:
+Run the provided web app after cloning the repo:
 
 ```
 ~/src/go-timeaway$ go run cmd/main.go
 > 2025/03/10 19:38:31 serving on 127.0.0.1:8000
 ```
+
+And then visit [http://127.0.0.1:8000](http://127.0.0.1:8000) in your
+browser. See the [example](#example) gif below.
 
 The url parameters each time a calculation is made, allowing
 calculations to be conveniently saved or bookmarked.
@@ -29,7 +30,6 @@ calculations to be conveniently saved or bookmarked.
 
 The [`trips`](trips/README.md) go module provides the means for
 calculation.
-
 
 The calculation method uses a 180 day moving window to calculate the
 longest compound trip length (`daysAway`). Where more than one window
