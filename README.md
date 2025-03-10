@@ -13,27 +13,30 @@ You can find out more about the 90 in 180 day rule on the [GOV.UK
 Travelling to the EU and Schengen area web
 page](https://www.gov.uk/travel-to-eu-schengen-area).
 
+## Run It
 
-(This app has also turned into a github actions/workflows experiment
-inspired by the book "[Shipping
-Go](https://www.manning.com/books/shipping-go)" by Joel Holmes, and
-trying out [htmx](https://htmx.org) and
-[hyperscript](https://hyperscript.org). These experiments partly
-accounts for the large number of commits and releases in this repo!)
+Run the provided web app:
+
+```
+~/src/go-timeaway$ go run cmd/main.go
+> 2025/03/10 19:38:31 serving on 127.0.0.1:8000
+```
+
+The url parameters each time a calculation is made, allowing
+calculations to be conveniently saved or bookmarked.
+
+## Calculation
 
 The [`trips`](trips/README.md) go module provides the means for
 calculation.
 
-The provided web app provides a convenient interface for making
-calculations at the `/` or `/home` endpoint. This endpoint can also
-receive pairs of Start and End parameters for each trip, and sets the
-url parameters each time a calculation is made, allowing calculations to
-be conveniently saved or bookmarked.
 
 The calculation method uses a 180 day moving window to calculate the
 longest compound trip length (`daysAway`). Where more than one window
 has the same `daysAway` the window with the earliest start date is
 reported.
+
+## API
 
 The `/trips` POST endpoint can be interacted with over json. This command:
 
@@ -77,6 +80,15 @@ gives the following output, assuming the server is running on `127.0.0.1:8000/`:
 ```
 Note that the last holiday has no overlap with the longest window of
 `2022-12-01` to `2023-05-29`.
+
+## Info
+
+This app has also turned into a github actions/workflows experiment
+inspired by the book "[Shipping
+Go](https://www.manning.com/books/shipping-go)" by Joel Holmes, and
+trying out [htmx](https://htmx.org) and
+[hyperscript](https://hyperscript.org). These experiments partly
+accounts for the large number of commits and releases in this repo!
 
 ## Example
 
