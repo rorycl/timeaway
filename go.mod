@@ -1,6 +1,6 @@
 module github.com/rorycl/timeaway
 
-go 1.22
+go 1.24
 
 replace github.com/rorycl/timeaway/trips => ./trips
 

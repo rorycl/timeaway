@@ -9,7 +9,7 @@ countries by non-EU visitors conform with Regulation (EU) No 610/2013
 limiting the total length of stays to no more than 90 days in any 180
 day window.
 
-You can find out more about the 80 in 190 day rule on the [GOV.UK
+You can find out more about the 90 in 180 day rule on the [GOV.UK
 Travelling to the EU and Schengen area web
 page](https://www.gov.uk/travel-to-eu-schengen-area).
 
