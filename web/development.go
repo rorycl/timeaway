@@ -1,5 +1,4 @@
 //go:build development
-// +build development
 
 package web
 

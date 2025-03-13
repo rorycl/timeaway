@@ -13,8 +13,9 @@ import (
 )
 
 var options struct {
-	Port string `short:"p" long:"port" description:"port to run on" default:"8000"`
-	Addr string `short:"a" long:"address" description:"network address to run on" default:"127.0.0.1"`
+	Port    string `short:"p" long:"port" description:"port to run on" default:"8000"`
+	Addr    string `short:"a" long:"address" description:"network address to run on" default:"127.0.0.1"`
+	BaseURL string `short:"b" long:"baseurl" description:"web server base URL" default:""`
 }
 
 func main() {
@@ -22,7 +23,7 @@ func main() {
 	log.SetOutput(os.Stderr)
 	_, err := flags.Parse(&options)
 	if err != nil {
-		fmt.Printf("flag parsing error: %v", err)
+		fmt.Printf("flag parsing error: %v\n", err)
 		os.Exit(1)
 	}
 
@@ -38,6 +39,6 @@ func main() {
 	}
 
 	// run the server
-	web.Serve(options.Addr, options.Port)
+	web.Serve(options.Addr, options.Port, options.BaseURL)
 
 }

@@ -74,8 +74,9 @@ func SetupFS() {
 	}
 }
 
-// Serve runs the web server on the specified address and port
-func Serve(addr string, port string) {
+// Serve runs the web server on the specified address and port mounted
+// at baseURL
+func Serve(addr, port, baseURL string) {
 
 	if addr == "" {
 		addr = ServerAddress
@@ -87,6 +88,10 @@ func Serve(addr string, port string) {
 		port = ServerPort
 	} else {
 		ServerPort = port
+	}
+
+	if baseURL != "" {
+		BaseURL = baseURL
 	}
 
 	// setup the filesystem
