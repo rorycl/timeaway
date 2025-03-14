@@ -86,7 +86,7 @@ func TestTrips(t *testing.T) {
 		t.Error("Expected breach to be false, got true")
 	}
 
-	if got, want := trips.window.Overlaps, 2; got != want {
+	if got, want := trips.Window.Overlaps, 2; got != want {
 		t.Errorf("partial trips should be %d, got %d", got, want)
 	}
 

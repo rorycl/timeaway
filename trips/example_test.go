@@ -50,7 +50,7 @@ func Example() {
 	// and other trip details
 	fmt.Printf("breach?: %t\n", trips.Breach)
 	fmt.Printf("longest stay: %d\n", trips.DaysAway)
-	fmt.Printf("window details: %s\n", trips.Window())
+	fmt.Printf("window details: %s\n", trips.Window)
 	fmt.Printf("window components: %s", trips.Holidays)
 
 	// Output:

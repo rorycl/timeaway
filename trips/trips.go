@@ -3,8 +3,12 @@ package trips
 import (
 	"errors"
 	"fmt"
+	"log"
+	"os"
 	"strings"
 	"time"
+
+	"github.com/sanity-io/litter"
 )
 
 var (
@@ -21,13 +25,14 @@ var (
 // number of days away. Where more than one window has the same number
 // of days away, the window with the earliest date is used.
 type Trips struct {
-	windowSize       int       // size of window of days to search over
-	maxStay          int       // the maximum length of trips in window
+	WindowSize       int       // size of window of days to search over
+	MaxStay          int       // the maximum length of trips in window
+	Start, End       time.Time // the start and end of the overall holidays
 	startFrame       time.Time // date at which to start calculating windows
 	endFrame         time.Time // date at which to stop calculating windows
-	originalHolidays []Holiday // list of holidays under consideration
-	window                     // the window with the longest compound trip length
-	longestDaysAway  int       // used during window calculations
+	OriginalHolidays []Holiday // list of holidays under consideration
+	Window                     // the window with the longest compound trip length
+	LongestDaysAway  int       // used during window calculations
 	Error            error     `json:"error"`  // calculation errors
 	Breach           bool      `json:"breach"` // if CompoundStayMaxDays is breached
 }
@@ -44,13 +49,13 @@ func (trips Trips) String() string {
 		tpl,
 		trips.Breach,
 		trips.DaysAway,
-		trips.window,
+		trips.WindowAsStr,
 	)
 }
 
-// Window returns a string representation of the longest window
-func (trips *Trips) Window() string {
-	return fmt.Sprint(trips.window)
+// WindowAsStr returns a string representation of the longest window
+func (trips *Trips) WindowAsStr() string {
+	return fmt.Sprint(trips.Window)
 }
 
 // newTrips makes a new Trips struct after checking the overrideable
@@ -67,8 +72,8 @@ func newTrips() (*Trips, error) {
 	if CompoundStayMaxDays > WindowMaxDays {
 		return &trips, errors.New("maximum stay cannot be greater than the window size")
 	}
-	trips.windowSize = WindowMaxDays
-	trips.maxStay = CompoundStayMaxDays
+	trips.WindowSize = WindowMaxDays
+	trips.MaxStay = CompoundStayMaxDays
 	return &trips, nil
 }
 
@@ -80,7 +85,7 @@ func (trips *Trips) addHoliday(h Holiday) error {
 		return fmt.Errorf("start date %s after %s", dayShortFmt(h.Start), dayShortFmt(h.End))
 	}
 	// check no overlaps
-	for _, o := range trips.originalHolidays {
+	for _, o := range trips.OriginalHolidays {
 		if ok := o.overlaps(h.Start, h.End); ok != nil {
 			return fmt.Errorf(
 				"trip %s to %s overlaps with %s to %s",
@@ -88,37 +93,40 @@ func (trips *Trips) addHoliday(h Holiday) error {
 			)
 		}
 	}
-	// set window dates
+	// set window dates; endFrame gets reset during calculation, so use
+	// Start and End for overall start/end
 	x := Holiday{}
 	if trips.startFrame == x.Start || trips.startFrame.After(h.Start) {
 		trips.startFrame = h.Start
+		trips.Start = trips.startFrame
 	}
 	if trips.endFrame.Before(h.End) {
 		trips.endFrame = h.End
+		trips.End = trips.endFrame
 	}
 	h.Duration = h.days()
 
-	trips.originalHolidays = append(trips.originalHolidays, h)
+	trips.OriginalHolidays = append(trips.OriginalHolidays, h)
 	return nil
 }
 
-// window stores the results of a calculation window. The window with
+// Window stores the results of a calculation window. The window with
 // the longest compound trip length (or `DaysAway`) is copied into the
 // Trips struct.
 //
-// Holidays are copied from Trips.originalHolidays to window.Holidays and
+// Holidays are copied from Trips.OriginalHolidays to window.Holidays and
 // decorated with partial Holidays where these overlap by the calculate
 // function. The window with the longest DaysAway is copied to Trips.
-type window struct {
+type Window struct {
 	Start    time.Time `json:"start"`    // start of this window
 	End      time.Time `json:"end"`      // end of this window
 	DaysAway int       `json:"daysAway"` // days away during this window
 	Overlaps int       `json:"overlaps"` // number of holiday overlaps
-	Holidays []Holiday `json:"holidays"` // trips.originalHolidays decorated with overlaps
+	Holidays []Holiday `json:"holidays"` // trips.OriginalHolidays decorated with overlaps
 }
 
 // String returns a printable version of a window
-func (w window) String() string {
+func (w Window) String() string {
 	tpl := "%s : %s (%d days, %d overlaps)"
 	s := fmt.Sprintf(
 		tpl, dayFmt(w.Start), dayFmt(w.End), w.DaysAway, w.Overlaps,
@@ -138,15 +146,15 @@ func (trips *Trips) calculate() (*Trips, error) {
 
 	// check trips has been properly initialised and there are holidays
 	// to process
-	if trips.maxStay == 0 || trips.windowSize == 0 {
+	if trips.MaxStay == 0 || trips.WindowSize == 0 {
 		return trips, errors.New("trip not properly initialised")
 	}
-	if len(trips.originalHolidays) < 1 {
+	if len(trips.OriginalHolidays) < 1 {
 		return trips, errors.New("no holidays provided")
 	}
 
 	// set suitable frame start and end in which to calculate windows
-	windowDuration := durationDays(trips.windowSize - 1) // remove last day
+	windowDuration := durationDays(trips.WindowSize - 1) // remove last day
 	trips.endFrame = trips.endFrame.Add(-windowDuration)
 	if trips.endFrame.Before(trips.startFrame) {
 		trips.endFrame = trips.startFrame
@@ -155,19 +163,19 @@ func (trips *Trips) calculate() (*Trips, error) {
 	// generate a series of windows starting on each day between
 	// trips.startFrame and trips.endFrame.
 	//
-	// For each window, if the windows.DaysAway > Trips.longestDaysAway,
+	// For each window, if the windows.DaysAway > Trips.LongestDaysAway,
 	// embed the window in the Trips struct.
 	//
 	// This loop could be moved to a set of goroutines although
 	// peformance for very large windows is still very quick, around
 	// 0.005s for a 720 day/180 stay use case.
 	for d := trips.startFrame; !d.After(trips.endFrame); d = d.Add(durationDays(1)) {
-		w := window{}
+		w := Window{}
 		w.Start = d
 		w.End = d.Add(windowDuration)
 
-		w.Holidays = make([]Holiday, len(trips.originalHolidays))
-		copy(w.Holidays, trips.originalHolidays)
+		w.Holidays = make([]Holiday, len(trips.OriginalHolidays))
+		copy(w.Holidays, trips.OriginalHolidays)
 
 		for i, t := range w.Holidays {
 			partialHoliday := t.overlaps(w.Start, w.End)
@@ -180,21 +188,38 @@ func (trips *Trips) calculate() (*Trips, error) {
 			w.Holidays[i].PartialHoliday = partialHoliday
 
 			// set longest trip/window if appropriate
-			if w.DaysAway > trips.longestDaysAway {
-				trips.longestDaysAway = w.DaysAway
-				trips.window = w
+			if w.DaysAway > trips.LongestDaysAway {
+				trips.LongestDaysAway = w.DaysAway
+				trips.Window = w
 			}
-			if w.DaysAway > trips.maxStay {
+			if w.DaysAway > trips.MaxStay {
 				trips.Breach = true
 			}
 		}
 	}
+	dumper := func() {
+		f, err := os.Create("trips_dump.txt")
+		if err != nil {
+			log.Printf("dump file open error %v", err)
+			return
+		}
+		defer f.Close()
+		litter.Config.FormatTime = true
+		litter.Config.DisablePointerReplacement = true
+		tDump := litter.Sdump(trips)
+		_, err = f.Write([]byte(tDump))
+		if err != nil {
+			log.Printf("dump write error %v", err)
+			return
+		}
+	}
+	dumper()
 	return trips, nil
 }
 
 // Calculate initialises a new Trips struct with the package variables
-// windowSize (the number of days over which to do the calculation) and
-// maxStay (the length of compound holidays) and then sequentially adds
+// WindowSize (the number of days over which to do the calculation) and
+// MaxStay (the length of compound holidays) and then sequentially adds
 // holidays, then runs the calculation, returning the resulting Trips
 // object and embedded window (with the longest DaysAway), and error if
 // any.

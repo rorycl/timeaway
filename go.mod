@@ -16,7 +16,9 @@ require (
 )
 
 require (
+	github.com/ajstarks/svgo v0.0.0-20211024235047-1546f124cd8b // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
+	github.com/sanity-io/litter v1.5.8 // indirect
 	golang.org/x/sys v0.30.0 // indirect
 	gopkg.in/go-playground/assert.v1 v1.2.1 // indirect
 )
