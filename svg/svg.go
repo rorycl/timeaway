@@ -3,6 +3,7 @@ package main
 
 import (
 	"fmt"
+	"maps"
 	"math"
 	"os"
 	"time"
@@ -149,9 +150,10 @@ type container struct {
 	borderWidth      int
 }
 
-func (c *container) render(x, y int, svg *svg.SVG) {
+func (c *container) render(width, height int, svg *svg.SVG) {
+	fmt.Printf("container render %d x %d\n", width, height)
 	const rectStyle string = "fill:%s;stroke:%s;stroke-width:%d"
-	svg.Rect(0, 0, x, y, fmt.Sprintf(
+	svg.Rect(0, 0, width, height, fmt.Sprintf(
 		rectStyle,
 		c.backgroundColour,
 		c.borderColour,
@@ -207,51 +209,53 @@ func (le *legend) render(svg *svg.SVG) {
 }
 
 type xyColRow struct {
-	col, row int
 	x, y     int
+	col, row int
 }
 
 type weekGrid struct {
 	startDate     time.Time
 	endDate       time.Time
-	weekNum       int   // number of weeks
-	rows          int   // number of rows at 8 weeks/row
-	columns       int   // number of columns
-	colPositions  []int // left coordinate of columns, also most right hand column
-	rowPositions  []int // top right coordinate of rows
-	width, height int   // overall width and height
+	rightGutter   int // most right hand right gutter
+	weekNum       int // number of weeks
+	rows          int // number of rows at 8 weeks/row
+	columns       int // number of columns
+	legendHeight  int // position of legend
+	width, height int // overall width and height
 
 	// report the column & row pos and coordinates
 	// for each monday in the matrix
 	dateMatrix map[time.Time]xyColRow
 }
 
+// changeDate is a function to either advance or retreat towards a day
+// of the week
+func changeDate(date time.Time, targetDay int, d time.Duration) time.Time {
+	if int(date.Weekday()) == targetDay {
+		return date
+	}
+	for i := 0; i < 6; i++ {
+		date = date.Add(d)
+		if int(date.Weekday()) == targetDay {
+			return date
+		}
+	}
+	panic("date could not be changed")
+}
+
 // newGrid makes a new weekGrid
 func newGrid(trips *trips.Trips) *weekGrid {
 	const (
 		weeksPerRow     int = 8
-		leftPadding     int = 21  // px
 		rightPadding    int = 21  // px
 		topPadding      int = 21  // px
-		bottomPadding   int = 21  // px
-		legendHeight    int = 7   // px
-		legendPadding   int = 21  // px between legend and week
+		bottomPadding   int = 34  // px
+		legendOwnHeight int = 7   // px
 		weekBlockHeight int = 62  // px
 		weekBlockWidth  int = 124 // px
 	)
-	grid := weekGrid{}
-
-	changeDate := func(date time.Time, targetDay int, d time.Duration) time.Time {
-		if int(date.Weekday()) == targetDay {
-			return date
-		}
-		for i := 0; i < 6; i++ {
-			date = date.Add(d)
-			if int(date.Weekday()) == targetDay {
-				return date
-			}
-		}
-		panic("date could not be changed")
+	grid := weekGrid{
+		columns: weeksPerRow,
 	}
 
 	grid.startDate = changeDate(trips.Start, 1, time.Hour*24*-1)
@@ -278,41 +282,22 @@ func newGrid(trips *trips.Trips) *weekGrid {
 	//       legend is at x0, y0
 	//       week3  is at x3, y1
 
-	// column positions from left margin
-	grid.colPositions = []int{
-		leftPadding,                        // c1
-		leftPadding + (weekBlockWidth * 1), // c2
-		leftPadding + (weekBlockWidth * 2), // c3
-		leftPadding + (weekBlockWidth * 3), // c4
-		leftPadding + (weekBlockWidth * 4), // c5
-		leftPadding + (weekBlockWidth * 5), // c6
-		leftPadding + (weekBlockWidth * 6), // c7
-		leftPadding + (weekBlockWidth * 7), // c8
-		leftPadding + (weekBlockWidth * 8), // c9 (R/right extent)
-		// right margin is c9 + rightPadding
-	}
-	grid.width = grid.colPositions[len(grid.colPositions)-1] + rightPadding
-	grid.columns = len(grid.colPositions) - 1 // c9 is a virtual column
+	grid.width = leftPadding + (weekBlockWidth * grid.columns) + rightPadding
+	grid.rightGutter = (weekBlockWidth * grid.columns) + weekNotchSpacing
 
-	grid.height = topPadding + legendHeight + (weekBlockHeight * grid.rows) + bottomPadding
-
-	// row positions from top margin
-	grid.rowPositions = []int{
-		topPadding + legendHeight, // r1 is at bottom of legend
-	}
-	for i := range grid.rows {
-		grid.rowPositions = append(grid.rowPositions, (topPadding+legendHeight)+(weekBlockHeight*(i+1))) // bottom of each row
-	}
+	grid.legendHeight = topPadding + legendOwnHeight // r1
+	grid.height = grid.legendHeight + (weekBlockHeight * (grid.rows - 1)) + bottomPadding
 
 	// build the dateMatrix
 	grid.dateMatrix = map[time.Time]xyColRow{}
 	col, row := 0, 0
-	for d := grid.startDate; d.Before(grid.end.Add(time.Hour * 24 * 7)); d.Add(time.Hour * 24 * 7) {
-		cx, cy, err := grid.coordinates(col, row+1)
-		if err != nil {
-			panic(err)
+	for d := grid.startDate; d.Before(grid.endDate); d = d.Add(time.Hour * 24 * 7) {
+		cx := leftPadding + (weekBlockWidth * col)
+		cy := grid.legendHeight + weekBlockHeight + (weekBlockHeight * row) // make space for first row
+		grid.dateMatrix[d] = xyColRow{
+			x: cx, y: cy, col: col, row: row,
 		}
-		grid.dateMatrix[d] = xyColRow{cx, cy, col, row}
+		// fmt.Printf("date %s cx %3d cy %3d col %d row %d\n", d.Format("2006-01-02"), cx, cy, col, row)
 		col += 1
 		if col == 8 {
 			col = 0
@@ -323,39 +308,118 @@ func newGrid(trips *trips.Trips) *weekGrid {
 	return &grid
 }
 
-// coordinates returns the left bottom coordinate of an item in the grid
-// using a rather eccentric x/y coordinate system with x values showing
-// column positions numbered from the left and y values used for row
-// positions starting at the top, with the first row reserved for the
-// legend.
-func (w *weekGrid) coordinates(x, y int) (int, int, error) {
-	if x > len(w.colPositions)-1 {
-		return 0, 0, fmt.Errorf("x %d y %d : x out of range", x, y)
-	}
-	if y > len(w.rowPositions)-1 {
-		return 0, 0, fmt.Errorf("x %d y %d : y out of range", x, y)
-	}
-	return w.colPositions[x], w.rowPositions[y], nil
+// coordinates returns the coordinates, if any, of each date
+func (wg *weekGrid) coordinates(date time.Time) (xyColRow, bool) {
+	coord, ok := wg.dateMatrix[date]
+	return coord, ok
 }
 
-// weekCoordinates returns a closure to return each week's coordinates
-// in turn.
-func (w *weekGrid) weekCoordinates() func() (int, int) {
-	x, y := -1, 1
-	return func() (int, int) {
-		x += 1
-		if x == w.columns {
-			x = 0
-			y++
+// rowYvalue returns the y coordinate of the named row or -1 if there is
+// no match.
+func (wg *weekGrid) rowYvalue(row int) int {
+	for v := range maps.Values(wg.dateMatrix) {
+		if v.row == row {
+			return v.y
 		}
-		wx, wy, err := w.coordinates(x, y)
-		if err != nil {
-			panic(err)
-		}
-		return wx, wy
 	}
+	return -1
 }
 
+type segment struct {
+	x1, y1, x2, y2 int
+}
+
+// getSegments returns a list of line segments describing where a stripe
+// should be written. The function panics if a date can't be found
+func (wg *weekGrid) getSegments(start, end time.Time, level int) []segment {
+
+	const (
+		stripePadding int = 10 // px
+	)
+
+	isoDOW := func(date time.Time) int {
+		dow := (int(date.Weekday()) - 1) % 7
+		if dow == -1 {
+			return 6
+		}
+		return dow
+	}
+
+	// advanceDays advances from Monday to the day in the week "notches"
+	// width pixels. addDay adds a day for the end notch, because each
+	// day spans one notch; there are 8 gaps and 7 notches.
+	advanceDays := func(dow int, addDay bool) int {
+		if addDay {
+			dow += 1
+		}
+		return dow * weekNotchSpacing
+	}
+
+	stripeYoffset := weekLinesPadding + weekNotchHeight + (stripePadding * (level + 1))
+
+	startMonday := changeDate(start, 1, time.Hour*24*-1)
+	startDay := isoDOW(start)
+	startCoords, ok := wg.coordinates(startMonday)
+	if !ok {
+		panic(fmt.Sprintf("couldn't resolve startCoords %v", startMonday))
+	}
+
+	endMonday := changeDate(end, 1, time.Hour*24*-1)
+	endDay := isoDOW(end)
+	endCoords, ok := wg.coordinates(endMonday)
+	if !ok {
+		panic(fmt.Sprintf("couldn't resolve endCoords %v", endMonday))
+	}
+
+	rowCount := endCoords.row - startCoords.row + 1
+	if rowCount == 1 {
+		return []segment{
+			segment{
+				x1: startCoords.x + advanceDays(startDay, false),
+				y1: startCoords.y - stripeYoffset,
+				x2: endCoords.x + advanceDays(endDay, true),
+				y2: endCoords.y - stripeYoffset,
+			},
+		}
+	}
+
+	started := false
+	segments := []segment{}
+	for row := startCoords.row; row <= endCoords.row; row++ {
+		if !started {
+			segments = append(segments, segment{
+				x1: startCoords.x + advanceDays(startDay, false),
+				y1: startCoords.y - stripeYoffset,
+				x2: wg.rightGutter,
+				y2: startCoords.y - stripeYoffset,
+			})
+			started = true
+			continue
+		}
+		if row < endCoords.row {
+			// to do this properly need to find the y height of the
+			// monday in this week
+			rowY := wg.rowYvalue(row)
+			segments = append(segments, segment{
+				x1: leftPadding,
+				y1: rowY - stripeYoffset,
+				x2: wg.rightGutter,
+				y2: rowY - stripeYoffset,
+			})
+			continue
+		}
+		segments = append(segments, segment{
+			x1: leftPadding,
+			y1: endCoords.y - stripeYoffset,
+			x2: endCoords.x + advanceDays(endDay, true),
+			y2: endCoords.y - stripeYoffset,
+		})
+	}
+	return segments
+}
+
+// week describes a week "skeleton" diagram of a line with 8 notches
+// describing the days of the week, with a date below.
 type week struct {
 	x, y   int // absolute top left coordinate
 	monday time.Time
@@ -367,22 +431,23 @@ func newWeek(x, y int, monday time.Time) *week {
 
 // generally needed const values
 const (
+	leftPadding      int = 34 // px
 	weekNotchHeight  int = 9
 	weekNotchSpacing int = 14
 	weekLinesLen     int = 98 // px
+	weekLinesPadding int = 16 // px
 )
 
 func (w *week) render(svg *svg.SVG) {
 	const (
-		fontStyle        string = "font-family:sans-serif;font-size:9pt;fill:black;text-anchor:left"
-		lineStyle        string = "stroke:%s;stroke-width:%d"
-		weekLinesColour  string = "black"
-		weekLinesStroke  int    = 2
-		weekLinesPadding int    = 16 // px
+		fontStyle       string = "font-family:sans-serif;font-size:9pt;fill:black;text-anchor:left"
+		lineStyle       string = "stroke:%s;stroke-width:%d"
+		weekLinesColour string = "black"
+		weekLinesStroke int    = 2
 	)
 
 	var text string
-	if w.monday.Day() < 7 {
+	if w.monday.Day() <= 7 {
 		text = w.monday.Format("2 Jan 2006")
 	} else {
 		text = w.monday.Format("2")
@@ -427,15 +492,19 @@ func newStripe(typer, colour string, start, end time.Time, width, level int) *st
 }
 
 // Rendering a stripe requires some to split across visual lines. The
-// grid function dateSegments returns the slice of general coordinate
-// segments for each date say cx and cy. These coordinates (cx,cy)
-// should have the week offsets added for the text label and notches
-// (see weekNotchHeight, weekNotchSpacing and weekLinesLen). The cx
-// value also represents a monday, so if the day of the week is
-// not a monday, the stripe should start or end at weekNotchSpacing *
-// dayofweek (where the day of the week is an iso week, not golangs).
-func (s *stripe) render(svg *svg.SVG) {
-
+// grid function getSegments returns the x1, y1, x2, y2 coordinates to
+// render the slice.
+func (s *stripe) render(g *weekGrid, svg *svg.SVG) {
+	const (
+		lineStyle string = "stroke:%s;stroke-width:%d"
+	)
+	segments := g.getSegments(s.startDate, s.endDate, s.level)
+	for _, seg := range segments {
+		svg.Line(
+			seg.x1, seg.y1, seg.x2, seg.y2,
+			fmt.Sprintf(lineStyle, s.colour, s.strokeWidth),
+		)
+	}
 }
 
 func main() {
@@ -455,28 +524,40 @@ func main() {
 	background := newContainer("#c4c8b7ff", "#ecececff", 2)
 	background.render(grid.width, grid.height, canvas)
 
-	legendX, legendY, err := grid.coordinates(0, 0)
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-	legend := newLegend(legendX, legendY, []label{
-		label{"holidays", "#00d455ff", 5},
-		label{"breach", "#ff0000ff", 5},
-		label{"longest window without breach", "#0000ffff", 5},
+	legend := newLegend(leftPadding, grid.legendHeight, []label{
+		label{"holidays", "green", 5},
+		label{"breach", "red", 5},
+		label{"longest window without breach", "blue", 5},
 	})
 	legend.render(canvas)
 
-	gridGenerator := grid.weekCoordinates()
 	for i := range grid.weekNum {
 		date := grid.startDate.Add(time.Hour * 24 * 7 * time.Duration(i)) // add a week to the start date
-		x, y := gridGenerator()
-		week := newWeek(x, y, date)
+		coordinates, ok := grid.coordinates(date)
+		if !ok {
+			fmt.Printf("date %s no coordinates\n", date)
+			os.Exit(1)
+		}
+		week := newWeek(coordinates.x, coordinates.y, date)
 		week.render(canvas)
 	}
+
+	for _, tr := range trips.OriginalHolidays {
+		thisStripe := newStripe("holiday", "green", tr.Start, tr.End, 5, 0)
+		thisStripe.render(grid, canvas)
+	}
+
+	if trips.Breach {
+		thisStripe := newStripe("breach", "red", trips.Window.Start, trips.Window.End, 5, 1)
+		thisStripe.render(grid, canvas)
+	} else {
+		thisStripe := newStripe("longest window", "blue", trips.Window.Start, trips.Window.End, 5, 1)
+		thisStripe.render(grid, canvas)
+	}
+
 	canvas.End()
 
-	fmt.Printf("%#v\n", grid)
+	// fmt.Printf("%#v\n", grid)
 	fmt.Printf("trips start : %s end %s\n", trips.Start.Format("Mon 02 Jan 2006"), trips.End.Format("Mon 02 Jan 2006"))
 	fmt.Printf("grid  start : %s end %s\n", grid.startDate.Format("Mon 02 Jan 2006"), grid.endDate.Format("Mon 02 Jan 2006"))
 
