@@ -187,7 +187,7 @@ func newLegend(x, y int, labels []label) *legend {
 func (le *legend) render(svg *svg.SVG) {
 	const (
 		keyWidth          int    = 20 // px
-		keySpacing        int    = 16 // px
+		keySpacing        int    = 10 // px
 		fontStyle         string = "font-family:sans-serif;font-size:9pt;fill:black;text-anchor:left"
 		lineStyle         string = "stroke:%s;stroke-width:%d"
 		lineBottomPadding int    = 4 // px
@@ -481,14 +481,24 @@ func (w *week) render(svg *svg.SVG) {
 // template for an example.
 type stripe struct {
 	typer              string // ok, breach or holiday
+	title              string
 	startDate, endDate time.Time
 	colour             string
 	strokeWidth        int
 	level              int // 0 is first level above week notches, 1 the second
 }
 
-func newStripe(typer, colour string, start, end time.Time, width, level int) *stripe {
-	return &stripe{typer, start, end, colour, width, level}
+func newStripe(typer, info, colour string, start, end time.Time, width, level int) *stripe {
+	if info != "" {
+		info += " (" + info + ") "
+	}
+	title := fmt.Sprintf(
+		"%s: %s to %s",
+		typer+info,
+		start.Format("2006-01-02"),
+		end.Format("2006-01-02"),
+	)
+	return &stripe{typer, title, start, end, colour, width, level}
 }
 
 // Rendering a stripe requires some to split across visual lines. The
@@ -499,12 +509,15 @@ func (s *stripe) render(g *weekGrid, svg *svg.SVG) {
 		lineStyle string = "stroke:%s;stroke-width:%d"
 	)
 	segments := g.getSegments(s.startDate, s.endDate, s.level)
+	svg.Group(s.typer)
 	for _, seg := range segments {
 		svg.Line(
 			seg.x1, seg.y1, seg.x2, seg.y2,
 			fmt.Sprintf(lineStyle, s.colour, s.strokeWidth),
 		)
 	}
+	svg.Title(s.title)
+	svg.Gend()
 }
 
 func main() {
@@ -543,15 +556,17 @@ func main() {
 	}
 
 	for _, tr := range trips.OriginalHolidays {
-		thisStripe := newStripe("holiday", "green", tr.Start, tr.End, 5, 0)
+		thisStripe := newStripe("holiday", "", "green", tr.Start, tr.End, 5, 0)
 		thisStripe.render(grid, canvas)
 	}
 
 	if trips.Breach {
-		thisStripe := newStripe("breach", "red", trips.Window.Start, trips.Window.End, 5, 1)
+		info := fmt.Sprintf("%d days", trips.Window.DaysAway)
+		thisStripe := newStripe("breach", info, "red", trips.Window.Start, trips.Window.End, 5, 1)
 		thisStripe.render(grid, canvas)
 	} else {
-		thisStripe := newStripe("longest window", "blue", trips.Window.Start, trips.Window.End, 5, 1)
+		info := fmt.Sprintf("%d days", trips.Window.DaysAway)
+		thisStripe := newStripe("longest window", info, "blue", trips.Window.Start, trips.Window.End, 5, 1)
 		thisStripe.render(grid, canvas)
 	}
 
