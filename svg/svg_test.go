@@ -1,7 +1,6 @@
 package svg
 
 import (
-	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -157,5 +156,4 @@ func TestSVG(t *testing.T) {
 	) {
 		t.Errorf("expected breach group title")
 	}
-	fmt.Println(svgOutput.String())
 }

@@ -20,7 +20,6 @@ type container struct {
 }
 
 func (c *container) render(width, height int, svg *svg.SVG) {
-	fmt.Printf("container render %d x %d\n", width, height)
 	const rectStyle string = "fill:%s;stroke:%s;stroke-width:%d"
 	svg.Rect(0, 0, width, height, fmt.Sprintf(
 		rectStyle,
@@ -130,7 +129,7 @@ func newGrid(trips *trips.Trips) *weekGrid {
 	grid.startDate = changeDate(trips.Start, 1, time.Hour*24*-1)
 	grid.endDate = changeDate(trips.End, 0, time.Hour*24*+1)
 	grid.weekNum = int(math.Round(grid.endDate.Sub(grid.startDate).Hours() / (7 * 24)))
-	grid.rows = int(math.Floor(float64(grid.weekNum)/float64(weeksPerRow))) + 1 // add the legend to the number of rows
+	grid.rows = int(math.Ceil(float64(grid.weekNum) / float64(weeksPerRow)))
 
 	//       +--+-----------+-----------+----------/ -+-----------+---+
 	//       |  |           |           |          /  |           |   |
@@ -155,7 +154,7 @@ func newGrid(trips *trips.Trips) *weekGrid {
 	grid.rightGutter = (weekBlockWidth * grid.columns) + weekNotchSpacing
 
 	grid.legendHeight = topPadding + legendOwnHeight // r1
-	grid.height = grid.legendHeight + (weekBlockHeight * (grid.rows - 1)) + bottomPadding
+	grid.height = grid.legendHeight + (weekBlockHeight * grid.rows) + bottomPadding
 
 	// build the dateMatrix
 	grid.dateMatrix = map[time.Time]xyColRow{}
@@ -166,7 +165,6 @@ func newGrid(trips *trips.Trips) *weekGrid {
 		grid.dateMatrix[d] = xyColRow{
 			x: cx, y: cy, col: col, row: row,
 		}
-		// fmt.Printf("date %s cx %3d cy %3d col %d row %d\n", d.Format("2006-01-02"), cx, cy, col, row)
 		col += 1
 		if col == 8 {
 			col = 0
