@@ -1,9 +1,11 @@
-// package svg provides a renderer for a sort of calendar for trips.
+// Package svg provides an svg renderer for a graphic calendar for
+// timeaway/trips as set out in the internal weekGrid documentation.
 package svg
 
 import (
 	"fmt"
 	"io"
+	"log"
 	"maps"
 	"math"
 	"time"
@@ -12,15 +14,52 @@ import (
 	"github.com/rorycl/timeaway/trips"
 )
 
-// svg types
+const (
+	// canvas
+	// https://www.w3.org/TR/SVG11/coords.html#ViewBoxAttribute
+	// viewBox="0 0 1500 1000" preserveAspectRatio="xMidYMid"
+
+	// styles
+	rectStyle       string = "fill:%s;stroke:%s;stroke-width:%d"
+	lineStyle       string = "stroke:%s;stroke-width:%d"
+	fontStyle       string = "font-family:sans-serif;font-size:9pt;fill:black;text-anchor:left"
+	weekLinesColour string = "black"
+
+	// placement based on design
+	keyWidth          int = 20 // px
+	keySpacing        int = 10 // px
+	lineBottomPadding int = 4  // px
+	weeksPerRow       int = 8
+	rightPadding      int = 21  // px
+	topPadding        int = 21  // px
+	bottomPadding     int = 34  // px
+	legendOwnHeight   int = 7   // px
+	weekBlockHeight   int = 62  // px
+	weekBlockWidth    int = 124 // px
+	stripePadding     int = 10  // px
+	leftPadding       int = 34  // px
+	weekNotchHeight   int = 9
+	weekNotchSpacing  int = 14
+	weekLinesLen      int = 98 // px
+	weekLinesPadding  int = 16 // px
+	weekLinesStroke   int = 2
+
+	// target width, which requires the design to be scale
+	targetWidth int = 860 // px
+)
+
+// container is the rectangle describing the content
 type container struct {
 	borderColour     string
 	backgroundColour string
 	borderWidth      int
 }
 
+func newContainer(color, bgColour string, width int) *container {
+	return &container{color, bgColour, width}
+}
+
 func (c *container) render(width, height int, svg *svg.SVG) {
-	const rectStyle string = "fill:%s;stroke:%s;stroke-width:%d"
 	svg.Rect(0, 0, width, height, fmt.Sprintf(
 		rectStyle,
 		c.backgroundColour,
@@ -29,10 +68,7 @@ func (c *container) render(width, height int, svg *svg.SVG) {
 	)
 }
 
-func newContainer(color, bgColour string, width int) *container {
-	return &container{color, bgColour, width}
-}
-
+// label is an item in the legend
 type label struct {
 	text        string
 	colour      string
@@ -43,6 +79,7 @@ func newLabel(text, colour string, strokeWidth int) *label {
 	return &label{text, colour, strokeWidth}
 }
 
+// legend describes a diagram "key" by position with labels
 type legend struct {
 	x, y   int // absolute coordinates
 	labels []label
@@ -53,14 +90,6 @@ func newLegend(x, y int, labels []label) *legend {
 }
 
 func (le *legend) render(svg *svg.SVG) {
-	const (
-		keyWidth          int    = 20 // px
-		keySpacing        int    = 10 // px
-		fontStyle         string = "font-family:sans-serif;font-size:9pt;fill:black;text-anchor:left"
-		lineStyle         string = "stroke:%s;stroke-width:%d"
-		lineBottomPadding int    = 4 // px
-	)
-
 	offsetX, offsetY := 0, 0
 	for _, l := range le.labels {
 		svg.Line(
@@ -76,10 +105,37 @@ func (le *legend) render(svg *svg.SVG) {
 	}
 }
 
+// xyColRow is a struct describing the x, y pixel position and the
+// column and row of the week in question.
 type xyColRow struct {
 	x, y     int
 	col, row int
 }
+
+// weekGrid describes the heart of the layout system starting at
+// startDate and ending at endDate setting out the weeks over rows and
+// columns under the legend (set out at legendHeight). Each week,
+// defined by the date of its Monday, is placed according to the
+// xyColRow set out in dateMatrix.
+//
+//       +--+-----------+-----------+----------/ -+-----------+---+
+//       |  |           |           |          /  |           |   |
+//  r1   |  +------     |           |          /  |           |   |
+//       |  | legend    |           |          /  |           |   |
+//       |  |           |           |          /  |           |   |
+//       |  |           |           |          /  |           |   |
+//  r2   |  +-----------+-----------+-------   / -+---------  |-  |
+//       |  |w1         |w2         |w3        /  |w8         |   |
+//       |  |           |           |          /  |           |   |
+//       +--+-----------+-----------+----------/ -+-----------+---+
+//
+//       lp c1          c2          c3            c8          R rightGutter
+//       lp = left padding
+//       c1, c2 are the week column positions
+//
+//       coordinate system runs from top left
+//       legend is at x0, y0
+//       week3  is at x3, y1
 
 type weekGrid struct {
 	startDate     time.Time
@@ -111,44 +167,18 @@ func changeDate(date time.Time, targetDay int, d time.Duration) time.Time {
 	panic("date could not be changed")
 }
 
-// newGrid makes a new weekGrid
+// newGrid makes a new weekGrid with the appropriate dimensions and
+// coordinates.
 func newGrid(trips *trips.Trips) *weekGrid {
-	const (
-		weeksPerRow     int = 8
-		rightPadding    int = 21  // px
-		topPadding      int = 21  // px
-		bottomPadding   int = 34  // px
-		legendOwnHeight int = 7   // px
-		weekBlockHeight int = 62  // px
-		weekBlockWidth  int = 124 // px
-	)
 	grid := weekGrid{
 		columns: weeksPerRow,
 	}
 
+	// Determine widths, heights and numbers of items.
 	grid.startDate = changeDate(trips.Start, 1, time.Hour*24*-1)
 	grid.endDate = changeDate(trips.End, 0, time.Hour*24*+1)
 	grid.weekNum = int(math.Round(grid.endDate.Sub(grid.startDate).Hours() / (7 * 24)))
 	grid.rows = int(math.Ceil(float64(grid.weekNum) / float64(weeksPerRow)))
-
-	//       +--+-----------+-----------+----------/ -+-----------+---+
-	//       |  |           |           |          /  |           |   |
-	//  r1   |  +------     |           |          /  |           |   |
-	//       |  | legend    |           |          /  |           |   |
-	//       |  |           |           |          /  |           |   |
-	//       |  |           |           |          /  |           |   |
-	//  r2   |  +-----------+-----------+-------   / -+---------  |-  |
-	//       |  |w1         |w2         |w3        /  |w8         |R  | R = right extent
-	//       |  |           |           |          /  |           |   |
-	//       +--+-----------+-----------+----------/ -+-----------+---+
-	//
-	//       lp c1          c2          c3            c8          c9
-	//       lp = left padding
-	//       c1, c2 are the week column positions
-	//
-	//       coordinate system runs from top left
-	//       legend is at x0, y0
-	//       week3  is at x3, y1
 
 	grid.width = leftPadding + (weekBlockWidth * grid.columns) + rightPadding
 	grid.rightGutter = (weekBlockWidth * grid.columns) + weekNotchSpacing
@@ -156,7 +186,7 @@ func newGrid(trips *trips.Trips) *weekGrid {
 	grid.legendHeight = topPadding + legendOwnHeight // r1
 	grid.height = grid.legendHeight + (weekBlockHeight * grid.rows) + bottomPadding
 
-	// build the dateMatrix
+	// Set out the dates/coordinates for dateMatrix.
 	grid.dateMatrix = map[time.Time]xyColRow{}
 	col, row := 0, 0
 	for d := grid.startDate; d.Before(grid.endDate); d = d.Add(time.Hour * 24 * 7) {
@@ -166,12 +196,11 @@ func newGrid(trips *trips.Trips) *weekGrid {
 			x: cx, y: cy, col: col, row: row,
 		}
 		col += 1
-		if col == 8 {
+		if col == grid.columns {
 			col = 0
 			row += 1
 		}
 	}
-
 	return &grid
 }
 
@@ -192,18 +221,23 @@ func (wg *weekGrid) rowYvalue(row int) int {
 	return -1
 }
 
+// segment describes the positioning of a horizontal line used to
+// describe a "stripe". y1 and y2 will always be the same.
 type segment struct {
 	x1, y1, x2, y2 int
 }
 
 // getSegments returns a list of line segments describing where a stripe
-// should be written. The function panics if a date can't be found
+// should be written. This function calculates if a stripe needs to be
+// split across margins so that, for example, a week spanning 12 weeks,
+// can be split over 2 or 3 rows of the output, returning either 2 or 3
+// items in the return segment slice. The function panics if a date
+// can't be found.
 func (wg *weekGrid) getSegments(start, end time.Time, level int) []segment {
 
-	const (
-		stripePadding int = 10 // px
-	)
-
+	// isoDOW returns an ISO day of week number where numbering starts
+	// from 0 for Monday to 6 for Sunday. Note that the ISO standard is
+	// actually 1 indexed rather than 0 indexed.
 	isoDOW := func(date time.Time) int {
 		dow := (int(date.Weekday()) - 1) % 7
 		if dow == -1 {
@@ -264,9 +298,7 @@ func (wg *weekGrid) getSegments(start, end time.Time, level int) []segment {
 			continue
 		}
 		if row < endCoords.row {
-			// to do this properly need to find the y height of the
-			// monday in this week
-			rowY := wg.rowYvalue(row)
+			rowY := wg.rowYvalue(row) // retrieve Y coordinates for this row
 			segments = append(segments, segment{
 				x1: leftPadding,
 				y1: rowY - stripeYoffset,
@@ -296,23 +328,7 @@ func newWeek(x, y int, monday time.Time) *week {
 	return &week{x, y, monday}
 }
 
-// generally needed const values
-const (
-	leftPadding      int = 34 // px
-	weekNotchHeight  int = 9
-	weekNotchSpacing int = 14
-	weekLinesLen     int = 98 // px
-	weekLinesPadding int = 16 // px
-)
-
 func (w *week) render(svg *svg.SVG) {
-	const (
-		fontStyle       string = "font-family:sans-serif;font-size:9pt;fill:black;text-anchor:left"
-		lineStyle       string = "stroke:%s;stroke-width:%d"
-		weekLinesColour string = "black"
-		weekLinesStroke int    = 2
-	)
-
 	var text string
 	if w.monday.Day() <= 7 {
 		text = w.monday.Format("2 Jan 2006")
@@ -372,9 +388,6 @@ func newStripe(typer, info, colour string, start, end time.Time, width, level in
 // grid function getSegments returns the x1, y1, x2, y2 coordinates to
 // render the slice.
 func (s *stripe) render(g *weekGrid, svg *svg.SVG) {
-	const (
-		lineStyle string = "stroke:%s;stroke-width:%d"
-	)
 	segments := g.getSegments(s.startDate, s.endDate, s.level)
 	svg.Group(s.typer)
 	for _, seg := range segments {
@@ -396,6 +409,8 @@ func TripsAsSVG(trips *trips.Trips, w io.Writer) error {
 
 	canvas := svg.New(w)
 	canvas.Start(grid.width, grid.height)
+	canvas.Scale(float64(targetWidth) / float64(grid.width)) // needs GEnd() -- see bottom
+
 	background := newContainer("#c4c8b7ff", "#ecececff", 2)
 	background.render(grid.width, grid.height, canvas)
 
@@ -406,8 +421,10 @@ func TripsAsSVG(trips *trips.Trips, w io.Writer) error {
 	})
 	legend.render(canvas)
 
+	// render the weeks by progressing a week at a time from the start
+	// date to the end date (generating grid.weekNum entries).
 	for i := range grid.weekNum {
-		date := grid.startDate.Add(time.Hour * 24 * 7 * time.Duration(i)) // add a week to the start date
+		date := grid.startDate.Add(time.Hour * 24 * 7 * time.Duration(i))
 		coordinates, ok := grid.coordinates(date)
 		if !ok {
 			return fmt.Errorf("date %s no coordinates\n", date)
@@ -416,21 +433,28 @@ func TripsAsSVG(trips *trips.Trips, w io.Writer) error {
 		week.render(canvas)
 	}
 
+	// stripe in the holidays
 	for _, tr := range trips.OriginalHolidays {
 		thisStripe := newStripe("holiday", "", "green", tr.Start, tr.End, 5, 0)
 		thisStripe.render(grid, canvas)
 	}
 
+	// stripe in either the breach or no-breach longest window line
+	// segments
+	overlapStart, overlapEnd := trips.Window.HolidayOverlapStartEnd()
+	log.Println("overlap", overlapStart, overlapEnd)
 	if trips.Breach {
 		info := fmt.Sprintf("%d days", trips.Window.DaysAway)
 		thisStripe := newStripe("breach", info, "red", trips.Window.Start, trips.Window.End, 5, 1)
 		thisStripe.render(grid, canvas)
 	} else {
 		info := fmt.Sprintf("%d days", trips.Window.DaysAway)
-		thisStripe := newStripe("longest window", info, "blue", trips.Window.Start, trips.Window.End, 5, 1)
+		// thisStripe := newStripe("longest window", info, "blue", trips.Window.Start, trips.Window.End, 5, 1)
+		thisStripe := newStripe("longest window", info, "blue", overlapStart, overlapEnd, 5, 1)
 		thisStripe.render(grid, canvas)
 	}
 
+	canvas.Gend() // end Scale
 	canvas.End()
 	return nil
 }
