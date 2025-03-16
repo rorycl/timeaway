@@ -134,6 +134,28 @@ func (w Window) String() string {
 	return s
 }
 
+// HolidayOverlapStartEnd Reports the start and end of the holidays
+// overlapping the longest window.
+func (w *Window) HolidayOverlapStartEnd() (time.Time, time.Time) {
+	var start, end time.Time
+	for _, h := range w.Holidays {
+		log.Println("start", h.PartialHoliday.Start)
+		start = h.PartialHoliday.Start
+		if start.After(w.Start) || start.Equal(w.Start) {
+			break
+		}
+	}
+	for i := len(w.Holidays) - 1; i >= 0; i-- {
+		h := w.Holidays[i]
+		log.Println("end", h.PartialHoliday.End)
+		end = h.PartialHoliday.End
+		if (end.Before(w.End) || end.Equal(w.End)) && end.After(start) {
+			break
+		}
+	}
+	return start, end
+}
+
 // calculate performs the window calculation returning the Trips struct
 // and error for returning by Calculate.
 //
