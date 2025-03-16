@@ -11,12 +11,14 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"strings"
 	"text/template"
 	"time"
 
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 
+	"github.com/rorycl/timeaway/svg"
 	"github.com/rorycl/timeaway/trips"
 )
 
@@ -382,9 +384,24 @@ func PartialReport(w http.ResponseWriter, r *http.Request) {
 	// error captured in trs.Error
 	trs, _ = calculate(holidays)
 
+	// svg creation
+	var svgPlot strings.Builder
+	if trs.Error == nil {
+		err := svg.TripsAsSVG(trs, &svgPlot)
+		if err != nil {
+			log.Printf("plotting error: %v", err)
+		}
+	}
+	plot := svgPlot.String()
+
+	// build output
+	output := struct {
+		Trips *trips.Trips
+		Plot  string
+	}{trs, plot}
+
 	t := template.Must(template.ParseFS(DirFS.TplFS, "partial-report.html"))
-	// t := template.Must(template.New("partial-report.html").ParseFiles(tplBasePath + "partial-report.html"))
-	err = t.Execute(w, trs)
+	err = t.Execute(w, output)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, "template writing problem : %s", err.Error())
