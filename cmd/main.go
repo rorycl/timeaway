@@ -18,27 +18,31 @@ var options struct {
 	BaseURL string `short:"b" long:"baseurl" description:"web server base URL" default:""`
 }
 
-func main() {
+var serve func(string, string, string) = web.Serve
+var exit func(int) = os.Exit
 
+func getOptions() (string, string, string) {
 	log.SetOutput(os.Stderr)
 	_, err := flags.Parse(&options)
 	if err != nil {
 		fmt.Printf("flag parsing error: %v\n", err)
-		os.Exit(1)
+		exit(1)
 	}
 
 	// verify options
 	port, err := strconv.Atoi(options.Port)
 	if err != nil || port == 0 {
 		fmt.Printf("port %s invalid; exiting\n", options.Port)
-		os.Exit(1)
+		exit(1)
 	}
 	if net.ParseIP(options.Addr) == nil {
 		fmt.Printf("address %s invalid; exiting\n", options.Addr)
-		os.Exit(1)
+		exit(1)
 	}
+	return options.Addr, options.Port, options.BaseURL
+}
 
+func main() {
 	// run the server
-	web.Serve(options.Addr, options.Port, options.BaseURL)
-
+	serve(getOptions())
 }
