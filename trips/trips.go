@@ -114,46 +114,30 @@ func (trips *Trips) addHoliday(h Holiday) error {
 // the longest compound trip length (or `DaysAway`) is copied into the
 // Trips struct.
 //
+// Start and End describe the start and end of the window (typically 180
+// days). While the longest overlap between the window in question and
+// holidays is reported by OverlapStart and OverlapEnd.
+//
 // Holidays are copied from Trips.OriginalHolidays to window.Holidays and
 // decorated with partial Holidays where these overlap by the calculate
 // function. The window with the longest DaysAway is copied to Trips.
 type Window struct {
-	Start    time.Time `json:"start"`    // start of this window
-	End      time.Time `json:"end"`      // end of this window
-	DaysAway int       `json:"daysAway"` // days away during this window
-	Overlaps int       `json:"overlaps"` // number of holiday overlaps
-	Holidays []Holiday `json:"holidays"` // trips.OriginalHolidays decorated with overlaps
+	Start        time.Time `json:"start"`        // start of this window
+	End          time.Time `json:"end"`          // end of this window
+	DaysAway     int       `json:"daysAway"`     // days away during this window
+	Overlaps     int       `json:"overlaps"`     // number of holiday overlaps
+	OverlapStart time.Time `json:"overlapStart"` // start of the overlap
+	OverlapEnd   time.Time `json:"overlapEnd"`   // end of the overlap
+	Holidays     []Holiday `json:"holidays"`     // trips.OriginalHolidays decorated with overlaps
 }
 
 // String returns a printable version of a window
 func (w Window) String() string {
-	tpl := "%s : %s (%d days, %d overlaps)"
+	tpl := "window %s:%s overlap %s:%s (%d days, %d overlaps)"
 	s := fmt.Sprintf(
-		tpl, dayFmt(w.Start), dayFmt(w.End), w.DaysAway, w.Overlaps,
+		tpl, dayFmt(w.Start), dayFmt(w.End), dayFmt(w.OverlapStart), dayFmt(w.OverlapEnd), w.DaysAway, w.Overlaps,
 	)
 	return s
-}
-
-// HolidayOverlapStartEnd Reports the start and end of the holidays
-// overlapping the longest window.
-func (w *Window) HolidayOverlapStartEnd() (time.Time, time.Time) {
-	var start, end time.Time
-	for _, h := range w.Holidays {
-		log.Println("start", h.PartialHoliday.Start)
-		start = h.PartialHoliday.Start
-		if start.After(w.Start) || start.Equal(w.Start) {
-			break
-		}
-	}
-	for i := len(w.Holidays) - 1; i >= 0; i-- {
-		h := w.Holidays[i]
-		log.Println("end", h.PartialHoliday.End)
-		end = h.PartialHoliday.End
-		if (end.Before(w.End) || end.Equal(w.End)) && end.After(start) {
-			break
-		}
-	}
-	return start, end
 }
 
 // calculate performs the window calculation returning the Trips struct
@@ -208,6 +192,12 @@ func (trips *Trips) calculate() (*Trips, error) {
 			w.Overlaps++
 			w.DaysAway += partialHoliday.Duration
 			w.Holidays[i].PartialHoliday = partialHoliday
+			if w.OverlapStart.IsZero() {
+				w.OverlapStart = partialHoliday.Start
+			}
+			if w.OverlapEnd.Before(partialHoliday.End) {
+				w.OverlapEnd = partialHoliday.End
+			}
 
 			// set longest trip/window if appropriate
 			if w.DaysAway > trips.LongestDaysAway {

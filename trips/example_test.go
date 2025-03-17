@@ -56,6 +56,6 @@ func Example() {
 	// Output:
 	// breach?: true
 	// longest stay: 91
-	// window details: Tuesday 10 January 2023 : Saturday 8 July 2023 (91 days, 3 overlaps)
+	// window details: window Tuesday 10 January 2023:Saturday 8 July 2023 overlap Tuesday 10 January 2023:Saturday 8 July 2023 (91 days, 3 overlaps)
 	// window components: [01/01/2022 to 01/01/2022 (1 days) 10/01/2023 to 08/02/2023 (30 days) [overlap 30 days] 11/02/2023 to 04/04/2023 (53 days) [overlap 53 days] 01/07/2023 to 30/07/2023 (30 days) [overlap 8 days] 10/06/2024 to 14/06/2024 (5 days)]
 }

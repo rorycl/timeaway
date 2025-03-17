@@ -1,6 +1,7 @@
 package trips
 
 import (
+	"fmt"
 	"net/url"
 	"strconv"
 	"testing"
@@ -96,6 +97,52 @@ func TestHolidaysOverlaps(t *testing.T) {
 
 		})
 	}
+}
+
+func TestHolidaysOverlapWindows(t *testing.T) {
+	tp := func(s, e string) *Holiday {
+		h, err := newHolidayFromStr(s, e)
+		if err != nil {
+			t.Fatalf("could not parse time %s", s)
+		}
+		return h
+	}
+
+	trips, err := Calculate(
+		[]Holiday{
+			*(tp("2023-02-01", "2023-02-02")),
+			*(tp("2023-07-30", "2023-08-01")),
+		},
+	)
+
+	if err != nil {
+		t.Fatalf("calculation error %v", err)
+	}
+	/*
+		postgres date maths
+		> select date'2023-08-01' - date'2023-02-02';
+		 ?column?
+		----------
+		180
+
+		This calculation is date inclusive, so
+		> select '2023-07-30'::date - '2023-02-01'::date  + 1;
+		 ?column?
+		----------
+		180
+
+	*/
+	expectedOverlap := tp("2023-02-01", "2023-07-30")
+
+	if got, want := trips.Window.OverlapStart, expectedOverlap.Start; !got.Equal(want) {
+		t.Errorf("crossover start got %s want : %s", got, want)
+	}
+	if got, want := trips.Window.OverlapEnd, expectedOverlap.End; !got.Equal(want) {
+		t.Errorf("crossover ended got %s want : %s", got, want)
+	}
+	fmt.Println(trips.Window.DaysAway)
+	fmt.Println(trips.Window.Start)
+	fmt.Println(trips.Window.End)
 }
 
 func TestHolidaysFromURL(t *testing.T) {
