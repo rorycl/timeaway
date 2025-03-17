@@ -1,6 +1,6 @@
 # timeaway
 
-version v0.6.5 : 20 June 2024 (update to go 1.22, htmx 2.0)
+version v0.7.0 : 17 March 2025 (update to go 1.24, calendar addition)
 
 A small web app to calculate if the compound length of trips to Schengen
 countries by non-EU visitors conform with Regulation (EU) No 610/2013
