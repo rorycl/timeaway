@@ -74,10 +74,6 @@ type label struct {
 	strokeWidth int
 }
 
-func newLabel(text, colour string, strokeWidth int) *label {
-	return &label{text, colour, strokeWidth}
-}
-
 // legend describes a diagram "key" by position with labels
 type legend struct {
 	x, y   int // absolute coordinates
@@ -431,7 +427,10 @@ func TripsAsSVG(trips *trips.Trips, w io.Writer) error {
 	// stripe in the holidays
 	for _, tr := range trips.OriginalHolidays {
 		thisStripe := newStripe("holiday", "", "green", tr.Start, tr.End, 5, 0)
-		thisStripe.render(grid, canvas)
+		err := thisStripe.render(grid, canvas)
+		if err != nil {
+			return fmt.Errorf("stripe render error: %w", err)
+		}
 	}
 
 	// stripe in either the breach or no-breach longest window line
@@ -446,14 +445,14 @@ func TripsAsSVG(trips *trips.Trips, w io.Writer) error {
 		thisStripe := newStripe("breach", info, "red", trips.Window.Start, trips.Window.End, 5, 1)
 		err := thisStripe.render(grid, canvas)
 		if err != nil {
-			return err
+			return fmt.Errorf("stripe render error: %w", err)
 		}
 	} else {
 		info := fmt.Sprintf("%d days", trips.Window.DaysAway)
 		thisStripe := newStripe("longest window", info, "blue", trips.Window.OverlapStart, trips.Window.OverlapEnd, 5, 1)
 		err := thisStripe.render(grid, canvas)
 		if err != nil {
-			return err
+			return fmt.Errorf("stripe render error: %w", err)
 		}
 	}
 

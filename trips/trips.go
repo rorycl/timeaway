@@ -49,13 +49,8 @@ func (trips Trips) String() string {
 		tpl,
 		trips.Breach,
 		trips.DaysAway,
-		trips.WindowAsStr,
+		trips.Window,
 	)
-}
-
-// WindowAsStr returns a string representation of the longest window
-func (trips *Trips) WindowAsStr() string {
-	return fmt.Sprint(trips.Window)
 }
 
 // newTrips makes a new Trips struct after checking the overrideable
