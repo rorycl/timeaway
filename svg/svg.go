@@ -151,31 +151,23 @@ type weekGrid struct {
 	dateMatrix map[time.Time]xyColRow
 }
 
-// changeDate is a function to either advance or retreat towards a day
-// of the week
-func changeDate(date time.Time, targetDay int, d time.Duration) time.Time {
-	if int(date.Weekday()) == targetDay {
-		return date
-	}
-	for i := 0; i < 6; i++ {
-		date = date.Add(d)
-		if int(date.Weekday()) == targetDay {
-			return date
-		}
-	}
-	panic("date could not be changed")
-}
-
 // newGrid makes a new weekGrid with the appropriate dimensions and
 // coordinates.
-func newGrid(trips *trips.Trips) *weekGrid {
+func newGrid(trips *trips.Trips) (*weekGrid, error) {
 	grid := weekGrid{
 		columns: weeksPerRow,
 	}
 
 	// Determine widths, heights and numbers of items.
-	grid.startDate = changeDate(trips.Start, 1, time.Hour*24*-1)
-	grid.endDate = changeDate(trips.End, 0, time.Hour*24*+1)
+	var err error
+	grid.startDate, err = changeDate(trips.Start, 1, time.Hour*24*-1)
+	if err != nil {
+		return nil, fmt.Errorf("grid startDate error %w", err)
+	}
+	grid.endDate, err = changeDate(trips.End, 0, time.Hour*24*+1)
+	if err != nil {
+		return nil, fmt.Errorf("grid endDate error %w", err)
+	}
 	grid.weekNum = int(math.Round(grid.endDate.Sub(grid.startDate).Hours() / (7 * 24)))
 	grid.rows = int(math.Ceil(float64(grid.weekNum) / float64(weeksPerRow)))
 
@@ -200,7 +192,7 @@ func newGrid(trips *trips.Trips) *weekGrid {
 			row += 1
 		}
 	}
-	return &grid
+	return &grid, nil
 }
 
 // coordinates returns the coordinates, if any, of each date
@@ -230,20 +222,8 @@ type segment struct {
 // should be written. This function calculates if a stripe needs to be
 // split across margins so that, for example, a week spanning 12 weeks,
 // can be split over 2 or 3 rows of the output, returning either 2 or 3
-// items in the return segment slice. The function panics if a date
-// can't be found.
-func (wg *weekGrid) getSegments(start, end time.Time, level int) []segment {
-
-	// isoDOW returns an ISO day of week number where numbering starts
-	// from 0 for Monday to 6 for Sunday. Note that the ISO standard is
-	// actually 1 indexed rather than 0 indexed.
-	isoDOW := func(date time.Time) int {
-		dow := (int(date.Weekday()) - 1) % 7
-		if dow == -1 {
-			return 6
-		}
-		return dow
-	}
+// items in the return segment slice.
+func (wg *weekGrid) getSegments(start, end time.Time, level int) ([]segment, error) {
 
 	// advanceDays advances from Monday to the day in the week "notches"
 	// width pixels. addDay adds a day for the end notch, because each
@@ -257,18 +237,27 @@ func (wg *weekGrid) getSegments(start, end time.Time, level int) []segment {
 
 	stripeYoffset := weekLinesPadding + weekNotchHeight + (stripePadding * (level + 1))
 
-	startMonday := changeDate(start, 1, time.Hour*24*-1)
+	startMonday, err := changeDate(start, 1, time.Hour*24*-1)
+	if err != nil {
+		return nil, fmt.Errorf("getSegments: couldn't find startMonday %v", startMonday)
+	}
 	startDay := isoDOW(start)
 	startCoords, ok := wg.coordinates(startMonday)
 	if !ok {
-		panic(fmt.Sprintf("couldn't resolve startCoords %v", startMonday))
+		return nil, fmt.Errorf("getSegments: couldn't resolve startCoords %v", startMonday)
 	}
 
-	endMonday := changeDate(end, 1, time.Hour*24*-1)
+	endMonday, err := changeDate(end, 1, time.Hour*24*-1)
+	if err != nil {
+		return nil, fmt.Errorf("getSegments: couldn't find endMonday %v", endMonday)
+	}
+	if err != nil {
+		return nil, err
+	}
 	endDay := isoDOW(end)
 	endCoords, ok := wg.coordinates(endMonday)
 	if !ok {
-		panic(fmt.Sprintf("couldn't resolve endCoords %v", endMonday))
+		return nil, fmt.Errorf("getSegments: couldn't resolve endCoords %v", endMonday)
 	}
 
 	rowCount := endCoords.row - startCoords.row + 1
@@ -280,7 +269,7 @@ func (wg *weekGrid) getSegments(start, end time.Time, level int) []segment {
 				x2: endCoords.x + advanceDays(endDay, true),
 				y2: endCoords.y - stripeYoffset,
 			},
-		}
+		}, nil
 	}
 
 	started := false
@@ -313,7 +302,7 @@ func (wg *weekGrid) getSegments(start, end time.Time, level int) []segment {
 			y2: endCoords.y - stripeYoffset,
 		})
 	}
-	return segments
+	return segments, nil
 }
 
 // week describes a week "skeleton" diagram of a line with 8 notches
@@ -386,8 +375,11 @@ func newStripe(typer, info, colour string, start, end time.Time, width, level in
 // Rendering a stripe requires some to split across visual lines. The
 // grid function getSegments returns the x1, y1, x2, y2 coordinates to
 // render the slice.
-func (s *stripe) render(g *weekGrid, svg *svg.SVG) {
-	segments := g.getSegments(s.startDate, s.endDate, s.level)
+func (s *stripe) render(g *weekGrid, svg *svg.SVG) error {
+	segments, err := g.getSegments(s.startDate, s.endDate, s.level)
+	if err != nil {
+		return fmt.Errorf("stripe (%s) segments error: %s", s.typer, err)
+	}
 	svg.Group(s.typer)
 	for _, seg := range segments {
 		svg.Line(
@@ -397,6 +389,7 @@ func (s *stripe) render(g *weekGrid, svg *svg.SVG) {
 	}
 	svg.Title(s.title)
 	svg.Gend()
+	return nil
 }
 
 // TripsAsSVG renders a set of trips as an SVG graphic calendar marking
@@ -404,7 +397,10 @@ func (s *stripe) render(g *weekGrid, svg *svg.SVG) {
 // results of the Trip calculations.
 func TripsAsSVG(trips *trips.Trips, w io.Writer) error {
 
-	grid := newGrid(trips)
+	grid, err := newGrid(trips)
+	if err != nil {
+		return err
+	}
 
 	canvas := svg.New(w)
 	canvas.Start(grid.width, grid.height)
@@ -447,12 +443,18 @@ func TripsAsSVG(trips *trips.Trips, w io.Writer) error {
 	// is a breach.
 	if trips.Breach {
 		info := fmt.Sprintf("%d days", trips.Window.DaysAway)
-		thisStripe := newStripe("breach", info, "red", trips.Window.OverlapStart, trips.Window.OverlapEnd, 5, 1)
-		thisStripe.render(grid, canvas)
+		thisStripe := newStripe("breach", info, "red", trips.Window.Start, trips.Window.End, 5, 1)
+		err := thisStripe.render(grid, canvas)
+		if err != nil {
+			return err
+		}
 	} else {
 		info := fmt.Sprintf("%d days", trips.Window.DaysAway)
 		thisStripe := newStripe("longest window", info, "blue", trips.Window.OverlapStart, trips.Window.OverlapEnd, 5, 1)
-		thisStripe.render(grid, canvas)
+		err := thisStripe.render(grid, canvas)
+		if err != nil {
+			return err
+		}
 	}
 
 	canvas.Gend() // end Scale
