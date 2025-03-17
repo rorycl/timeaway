@@ -3,12 +3,8 @@ package trips
 import (
 	"errors"
 	"fmt"
-	"log"
-	"os"
 	"strings"
 	"time"
-
-	"github.com/sanity-io/litter"
 )
 
 var (
@@ -204,23 +200,11 @@ func (trips *Trips) calculate() (*Trips, error) {
 			}
 		}
 	}
-	dumper := func() {
-		f, err := os.Create("trips_dump.txt")
-		if err != nil {
-			log.Printf("dump file open error %v", err)
-			return
-		}
-		defer f.Close()
-		litter.Config.FormatTime = true
-		litter.Config.DisablePointerReplacement = true
-		tDump := litter.Sdump(trips)
-		_, err = f.Write([]byte(tDump))
-		if err != nil {
-			log.Printf("dump write error %v", err)
-			return
-		}
-	}
-	dumper()
+
+	// enable for trip struct dumping for investigation or test file
+	// creation.
+	// dumper(trips)
+
 	return trips, nil
 }
 
