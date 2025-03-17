@@ -5,7 +5,6 @@ package svg
 import (
 	"fmt"
 	"io"
-	"log"
 	"maps"
 	"math"
 	"time"
@@ -440,17 +439,19 @@ func TripsAsSVG(trips *trips.Trips, w io.Writer) error {
 	}
 
 	// stripe in either the breach or no-breach longest window line
-	// segments
-	overlapStart, overlapEnd := trips.Window.HolidayOverlapStartEnd()
-	log.Println("overlap", overlapStart, overlapEnd)
+	// segments showing the first holiday start date
+	// (trips.Window.OverlapStart) and last holiday end date
+	// (trips.Window.OverlapEnd) overlapping with the assessment window.
+	// Note that trips.Window.OverlapStart and trips.Window.OverlapEnd
+	// will the same as trips.Window.Start and trips.Window.End if there
+	// is a breach.
 	if trips.Breach {
 		info := fmt.Sprintf("%d days", trips.Window.DaysAway)
-		thisStripe := newStripe("breach", info, "red", trips.Window.Start, trips.Window.End, 5, 1)
+		thisStripe := newStripe("breach", info, "red", trips.Window.OverlapStart, trips.Window.OverlapEnd, 5, 1)
 		thisStripe.render(grid, canvas)
 	} else {
 		info := fmt.Sprintf("%d days", trips.Window.DaysAway)
-		// thisStripe := newStripe("longest window", info, "blue", trips.Window.Start, trips.Window.End, 5, 1)
-		thisStripe := newStripe("longest window", info, "blue", overlapStart, overlapEnd, 5, 1)
+		thisStripe := newStripe("longest window", info, "blue", trips.Window.OverlapStart, trips.Window.OverlapEnd, 5, 1)
 		thisStripe.render(grid, canvas)
 	}
 
