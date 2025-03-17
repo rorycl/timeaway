@@ -18,7 +18,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: checkout
-        uses: actions/checkout@v5 # needed for cache
+        uses: actions/checkout@v4 # needed for cache
+      - uses: actions/setup-go@v5
         with:
           go-version: stable
           cache: true
