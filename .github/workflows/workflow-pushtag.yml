@@ -23,6 +23,10 @@ on:
   #   branches:
   #     - main
 
+  workflow_dispatch:
+    # set any applicable workflow dispatch details as set out at
+    # https://docs.github.com/en/actions/writing-workflows/choosing-when-your-workflow-runs/events-that-trigger-workflows#workflow_dispatch
+
 permissions:
   contents: write
 
