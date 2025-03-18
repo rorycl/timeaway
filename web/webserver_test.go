@@ -173,9 +173,10 @@ func TestTripsEndpoint(t *testing.T) {
 // rendering
 func TestPartialEndpoints(t *testing.T) {
 
-	// the partials use the templates endpoint
+	// the partials use the templates endpoint (only used for
+	// PartialAddTrip)
 	DirFS = &fileSystem{}
-	DirFS.TplFS = os.DirFS("template")
+	DirFS.TplFS = os.DirFS("templates")
 
 	testCases := []struct {
 		name       string

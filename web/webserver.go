@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"html/template"
 	"io"
 	"io/fs"
 	"log"
@@ -12,7 +13,6 @@ import (
 	"net/url"
 	"os"
 	"strings"
-	"text/template"
 	"time"
 
 	"github.com/gorilla/handlers"
@@ -168,10 +168,8 @@ func Serve(addr, port, baseURL string) {
 // Home is the home page
 func Home(w http.ResponseWriter, r *http.Request) {
 
-	t, err := template.ParseFS(DirFS.TplFS, "home.html")
-	if err != nil {
-		log.Fatal(err)
-	}
+	// date about 6 months ago
+	defaultDate := time.Now().Add(time.Hour * -24 * 7 * 26)
 
 	// retrieve holidays, if any, ignoring errors
 	holidays, err := trips.HolidaysURLDecoder(r.URL.Query())
@@ -179,21 +177,32 @@ func Home(w http.ResponseWriter, r *http.Request) {
 		log.Printf("holidays GET : %+v err : %v", holidays, err)
 	}
 
+	t := template.New("home.html")
+	t = t.Funcs(webFuncMap)
+	t, err = t.ParseFS(DirFS.TplFS, "home.html")
+	if err != nil {
+		log.Printf("home template parse error %v", err)
+		http.Error(w, "template error; apologies", http.StatusInternalServerError)
+		return
+	}
+
 	data := struct {
-		Title      string
-		Address    string
-		Port       string
-		InputDates []trips.Holiday
+		Title       string
+		Address     string
+		Port        string
+		InputDates  []trips.Holiday
+		DefaultDate time.Time
 	}{
 		"trip calculator",
 		ServerAddress,
 		ServerPort,
 		holidays,
+		defaultDate,
 	}
 	err = t.Execute(w, data)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprintf(w, "template writing problem : %s", err.Error())
+		log.Printf("home template writing error %v", err)
+		http.Error(w, "template writing error.", http.StatusInternalServerError)
 	}
 }
 
@@ -328,7 +337,26 @@ func PartialNoContent(w http.ResponseWriter, r *http.Request) {
 
 // PartialAddTrip adds a trip button row
 func PartialAddTrip(w http.ResponseWriter, r *http.Request) {
-	_ = partialWriter(w, "templates", "partial-addtrip.html")
+
+	// date about 6 months ago
+	defaultDate := time.Now().Add(time.Hour * -24 * 7 * 26)
+
+	var err error
+	t := template.New("partial-addtrip.html")
+	t = t.Funcs(webFuncMap)
+	t, err = t.ParseFS(DirFS.TplFS, "partial-addtrip.html")
+	if err != nil {
+		log.Printf("partial add trip template parse error %v", err)
+		http.Error(w, "template error; apologies", http.StatusInternalServerError)
+		return
+	}
+
+	data := struct{ DefaultDate time.Time }{defaultDate}
+	err = t.Execute(w, data)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, "template writing problem : %s", err.Error())
+	}
 }
 
 // PartialReport shows the results of a form submission in html
@@ -394,11 +422,12 @@ func PartialReport(w http.ResponseWriter, r *http.Request) {
 	}
 	plot := svgPlot.String()
 
-	// build output
+	// build output. The Plot output is verbatim svg that should not be
+	// escaped.
 	output := struct {
 		Trips *trips.Trips
-		Plot  string
-	}{trs, plot}
+		Plot  template.HTML
+	}{trs, template.HTML(plot)}
 
 	t := template.Must(template.ParseFS(DirFS.TplFS, "partial-report.html"))
 	err = t.Execute(w, output)
