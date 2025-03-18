@@ -154,16 +154,31 @@ func newGrid(trips *trips.Trips) (*weekGrid, error) {
 		columns: weeksPerRow,
 	}
 
-	// Determine widths, heights and numbers of items.
+	// Use the start and end date of the trips by default for the
+	// reporting period. However if the window extends past these dates
+	// and the Trips are in Breach, use the window dates instead in
+	// order to render the breach strip correctly (otherwise the breach
+	// strip cannot resolve to a system coordinate).
 	var err error
+	minStartDate := trips.Start
+	if minStartDate.After(trips.Window.Start) && trips.Breach {
+		minStartDate = trips.Window.Start
+	}
 	grid.startDate, err = changeDate(trips.Start, 1, time.Hour*24*-1)
 	if err != nil {
 		return nil, fmt.Errorf("grid startDate error %w", err)
 	}
-	grid.endDate, err = changeDate(trips.End, 0, time.Hour*24*+1)
+
+	maxEndDate := trips.End
+	if maxEndDate.Before(trips.Window.End) && trips.Breach {
+		maxEndDate = trips.Window.End
+	}
+	grid.endDate, err = changeDate(maxEndDate, 0, time.Hour*24*+1)
 	if err != nil {
 		return nil, fmt.Errorf("grid endDate error %w", err)
 	}
+
+	// Determine widths, heights and numbers of items.
 	grid.weekNum = int(math.Round(grid.endDate.Sub(grid.startDate).Hours() / (7 * 24)))
 	grid.rows = int(math.Ceil(float64(grid.weekNum) / float64(weeksPerRow)))
 
