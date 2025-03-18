@@ -223,6 +223,15 @@ func (wg *weekGrid) rowYvalue(row int) int {
 	return -1
 }
 
+// viewBox calculates the scaled viewbox x, y dimensions for the svg
+// drawing based on the provided pageWidth.
+func (wg *weekGrid) viewBox(pageWidth int) (x, y int) {
+	scaleFactor := float64(pageWidth) / float64(wg.width)
+	x = int(float64(wg.width) * scaleFactor)
+	y = int(float64(wg.height) * scaleFactor)
+	return x, y
+}
+
 // segment describes the positioning of a horizontal line used to
 // describe a "stripe". y1 and y2 will always be the same.
 type segment struct {
@@ -414,7 +423,17 @@ func TripsAsSVG(trips *trips.Trips, w io.Writer) error {
 	}
 
 	canvas := svg.New(w)
-	canvas.Start(grid.width, grid.height)
+
+	// calculate the canvas and viewbox sizes.
+	// https://developer.mozilla.org/en-US/docs/Web/SVG/Attribute/viewBox
+	// https://www.digitalocean.com/community/tutorials/svg-svg-viewbox
+	viewboxX, viewboxY := grid.viewBox(targetWidth)
+	viewBox := fmt.Sprintf(`viewBox="0 0 %d %d"`, viewboxX, viewboxY)
+	// canvas.Start(grid.width, grid.height, viewBox)
+	// It isn't clear why Start doesn't take the image width/height
+	// (grid.width, grid.height) since the viewBox is smaller than the
+	// image.
+	canvas.Start(viewboxX, viewboxY, viewBox)
 	canvas.Scale(float64(targetWidth) / float64(grid.width)) // needs GEnd() -- see bottom
 
 	background := newContainer("#c4c8b7ff", "#ecececff", 2)
@@ -471,7 +490,7 @@ func TripsAsSVG(trips *trips.Trips, w io.Writer) error {
 		}
 	}
 
-	canvas.Gend() // end Scale
+	canvas.Gend()
 	canvas.End()
 	return nil
 }
