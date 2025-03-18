@@ -164,7 +164,7 @@ func newGrid(trips *trips.Trips) (*weekGrid, error) {
 	if minStartDate.After(trips.Window.Start) && trips.Breach {
 		minStartDate = trips.Window.Start
 	}
-	grid.startDate, err = changeDate(trips.Start, 1, time.Hour*24*-1)
+	grid.startDate, err = changeDate(minStartDate, 1, time.Hour*24*-1)
 	if err != nil {
 		return nil, fmt.Errorf("grid startDate error %w", err)
 	}
