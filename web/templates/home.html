@@ -50,9 +50,23 @@ do overlap, consider the trips a single trip for the purposes of the calculator,
 {{ range $index, $date := .InputDates }}
 <p>
 <label>start:</label>
-<input type="date" class="start" name="Start" value="{{ $date.Start.Format "2006-01-02" }}" min="2018-01-01" max="2033-01-01" required />
+<input
+    type="date" 
+    class="start" 
+    name="Start" 
+    value="{{  $date.Start | dateStr }}" 
+    min="{{ yearsAgo $.DefaultDate -2 | dateStr }}" 
+    max="{{ yearsAgo $.DefaultDate +4 | dateStr }}" 
+    required />
 <label>end:</label>
-<input type="date" class="end" name="End" value="{{ $date.End.Format "2006-01-02" }}" min="2018-01-01" max="2033-01-01" required />
+<input
+    type="date" 
+    class="end" 
+    name="End" 
+    value="{{  $date.End | dateStr }}" 
+    min="{{ yearsAgo $.DefaultDate -2 | dateStr }}" 
+    max="{{ yearsAgo $.DefaultDate +4 | dateStr }}"
+    required />
 <button type="button" hx-trigger="click" hx-get="./partials/nocontent" hx-target="closest p" hx-swap="outerHTML">remove</button>
 </p>
 {{ end }}
