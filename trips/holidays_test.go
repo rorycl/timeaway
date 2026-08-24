@@ -134,15 +134,15 @@ func TestHolidaysOverlapWindows(t *testing.T) {
 	*/
 	expectedOverlap := tp("2023-02-01", "2023-07-30")
 
-	if got, want := trips.Window.OverlapStart, expectedOverlap.Start; !got.Equal(want) {
+	if got, want := trips.OverlapStart, expectedOverlap.Start; !got.Equal(want) {
 		t.Errorf("crossover start got %s want : %s", got, want)
 	}
-	if got, want := trips.Window.OverlapEnd, expectedOverlap.End; !got.Equal(want) {
+	if got, want := trips.OverlapEnd, expectedOverlap.End; !got.Equal(want) {
 		t.Errorf("crossover ended got %s want : %s", got, want)
 	}
-	fmt.Println(trips.Window.DaysAway)
-	fmt.Println(trips.Window.Start)
-	fmt.Println(trips.Window.End)
+	fmt.Println(trips.DaysAway)
+	fmt.Println(trips.Start)
+	fmt.Println(trips.End)
 }
 
 func TestHolidaysFromURL(t *testing.T) {

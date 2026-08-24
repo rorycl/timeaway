@@ -33,11 +33,10 @@ func newHoliday(s, e time.Time) (*Holiday, error) {
 	if s.After(e) {
 		return h, fmt.Errorf("start date %s after %s", dayShortFmt(s), dayShortFmt(e))
 	}
-	empty := time.Time{}
-	if s == empty {
+	if s.IsZero() {
 		return h, errors.New("start date not set")
 	}
-	if e == empty {
+	if e.IsZero() {
 		return h, errors.New("end date not set")
 	}
 	h.Start = s
@@ -173,12 +172,12 @@ func (h Holiday) overlaps(start, end time.Time) *Holiday {
 		return partialHoliday
 	}
 	// partial overlap
-	if h.Start.Before(start) || h.Start == start {
+	if h.Start.Before(start) || h.Start.Equal(start) {
 		partialHoliday.Start = start
 	} else {
 		partialHoliday.Start = h.Start
 	}
-	if h.End.After(end) || h.End == end {
+	if h.End.After(end) || h.End.Equal(end) {
 		partialHoliday.End = end
 	} else {
 		partialHoliday.End = h.End
@@ -204,7 +203,7 @@ func HolidaysURLEncode(hols []Holiday) string {
 		if counter > 0 {
 			t = "&" + t
 		}
-		u.WriteString(fmt.Sprintf(t, h.Start.Format("2006-01-02"), h.End.Format("2006-01-02")))
+		fmt.Fprintf(&u, t, h.Start.Format("2006-01-02"), h.End.Format("2006-01-02"))
 		counter++
 	}
 	return strings.TrimRight(u.String(), "&")

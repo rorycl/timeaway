@@ -1,5 +1,6 @@
 package trips
 
+// dumper provides a way of dumping trips to a file for inspection or testing purposes.
 //
 // import (
 // 	"log"

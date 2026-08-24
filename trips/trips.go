@@ -87,7 +87,7 @@ func (trips *Trips) addHoliday(h Holiday) error {
 	// set window dates; endFrame gets reset during calculation, so use
 	// Start and End for overall start/end
 	x := Holiday{}
-	if trips.startFrame == x.Start || trips.startFrame.After(h.Start) {
+	if trips.startFrame.Equal(x.Start) || trips.startFrame.After(h.Start) {
 		trips.startFrame = h.Start
 		trips.Start = trips.startFrame
 	}
