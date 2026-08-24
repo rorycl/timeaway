@@ -81,7 +81,7 @@ func HolidaysURLDecoder(input url.Values) ([]Holiday, error) {
 	hols := []Holiday{}
 
 	decoder := form.NewDecoder()
-	decoder.RegisterCustomTypeFunc(func(vals []string) (interface{}, error) {
+	decoder.RegisterCustomTypeFunc(func(vals []string) (any, error) {
 		return time.Parse("2006-01-02", vals[0])
 	}, time.Time{})
 
@@ -196,7 +196,7 @@ func HolidaysURLEncode(hols []Holiday) string {
 	sort.SliceStable(hols, func(i, j int) bool {
 		return hols[i].Start.Before(hols[j].Start)
 	})
-	u := ""
+	var u strings.Builder
 	counter := 0
 	tpl := "Start=%s&End=%s"
 	for _, h := range hols {
@@ -204,10 +204,10 @@ func HolidaysURLEncode(hols []Holiday) string {
 		if counter > 0 {
 			t = "&" + t
 		}
-		u += fmt.Sprintf(t, h.Start.Format("2006-01-02"), h.End.Format("2006-01-02"))
+		u.WriteString(fmt.Sprintf(t, h.Start.Format("2006-01-02"), h.End.Format("2006-01-02")))
 		counter++
 	}
-	return strings.TrimRight(u, "&")
+	return strings.TrimRight(u.String(), "&")
 }
 
 // durationDays returns a duration for the number of days specified

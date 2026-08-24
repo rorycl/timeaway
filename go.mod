@@ -1,6 +1,6 @@
 module github.com/rorycl/timeaway
 
-go 1.25
+go 1.26
 
 replace github.com/rorycl/timeaway/trips => ./trips
 
@@ -17,7 +17,7 @@ require (
 )
 
 require (
-	github.com/felixge/httpsnoop v1.0.4 // indirect
-	golang.org/x/sys v0.38.0 // indirect
+	github.com/felixge/httpsnoop v1.1.0 // indirect
+	golang.org/x/sys v0.47.0 // indirect
 	gopkg.in/go-playground/assert.v1 v1.2.1 // indirect
 )

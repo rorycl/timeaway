@@ -19,7 +19,7 @@ func changeDate(date time.Time, targetDay int, d time.Duration) (time.Time, erro
 	if int(date.Weekday()) == targetDay {
 		return date, nil
 	}
-	for i := 0; i < 6; i++ {
+	for range 6 {
 		date = date.Add(d)
 		if int(date.Weekday()) == targetDay {
 			return date, nil
