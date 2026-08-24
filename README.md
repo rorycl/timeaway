@@ -1,32 +1,25 @@
 # timeaway
 
-version v0.7.8 : 18 March 2025 (fix svg calendar sizing)
+version v0.7.9 : 24 August 2026 (update for go 1.26)
 
 A small web app to calculate if the compound length of trips to Schengen
 countries by non-EU visitors conform with Regulation (EU) No 610/2013
 limiting the total length of stays to no more than 90 days in any 180
-day window.
+day window. (Note that visits to the two [non-Shengen EU
+countries](https://en.wikipedia.org/wiki/Schengen_Area), Ireland and
+Cyprus, should _not_ be counted towards the 90 day limit.)
 
-See the [example gif](#example).
+See the [example gif](#example). Trips are conveniently recorded in the
+url for bookmarking.
 
 You can find out more about the 90 in 180 day rule on the [GOV.UK
 Travelling to the EU and Schengen area web
-page](https://www.gov.uk/travel-to-eu-schengen-area).
+page](https://www.gov.uk/travel-to-eu-schengen-area), and refer to the
+[official EU short-stay calculator](https://home-affairs.ec.europa.eu/policies/schengen/border-crossing/short-stay-calculator_en).
 
-## Run It
+## Example
 
-Run the provided web app after cloning the repo:
-
-```
-~/src/go-timeaway$ go run cmd/main.go
-> 2025/03/10 19:38:31 serving on 127.0.0.1:8000
-```
-
-And then visit [http://127.0.0.1:8000](http://127.0.0.1:8000) in your
-browser. See the [example](#example) gif below.
-
-The url parameters each time a calculation is made, allowing
-calculations to be conveniently saved or bookmarked.
+![](util/example.gif)
 
 ## Calculation
 
@@ -82,19 +75,6 @@ gives the following output, assuming the server is running on `127.0.0.1:8000/`:
 ```
 Note that the last holiday has no overlap with the longest window of
 `2022-12-01` to `2023-05-29`.
-
-## Info
-
-This app has also turned into a github actions/workflows experiment
-inspired by the book "[Shipping
-Go](https://www.manning.com/books/shipping-go)" by Joel Holmes, and
-trying out [htmx](https://htmx.org) and
-[hyperscript](https://hyperscript.org). These experiments partly
-accounts for the large number of commits and releases in this repo!
-
-## Example
-
-![](util/example.gif)
 
 ## Licence
 
