@@ -1,0 +1,7 @@
+# HTML call example
+
+echo "curl to succeed, with breach true (91 days away)"
+curl -X POST -d \
+'Start=2022-12-01&End=2022-12-01&Start=2023-01-02&End=2023-03-30&Start=2023-04-01&End=2023-04-02&Start=2023-09-03&End=2023-09-12' \
+127.0.0.1:8000/partials/report
+
