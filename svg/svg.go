@@ -452,7 +452,7 @@ func TripsAsSVG(trips *trips.Trips, w io.Writer) error {
 		date := grid.startDate.Add(time.Hour * 24 * 7 * time.Duration(i))
 		coordinates, ok := grid.coordinates(date)
 		if !ok {
-			return fmt.Errorf("date %s no coordinates\n", date)
+			return fmt.Errorf("date %s no coordinates", date)
 		}
 		week := newWeek(coordinates.x, coordinates.y, date)
 		week.render(canvas)
@@ -474,16 +474,19 @@ func TripsAsSVG(trips *trips.Trips, w io.Writer) error {
 	// Note that trips.Window.OverlapStart and trips.Window.OverlapEnd
 	// will the same as trips.Window.Start and trips.Window.End if there
 	// is a breach.
+	//
+	// Note that results from the longest window are copied to trips, so the trips data
+	// shown here is from the `trips` itself rather than `trips.Window`.
 	if trips.Breach {
-		info := fmt.Sprintf("%d days", trips.Window.DaysAway)
-		thisStripe := newStripe("breach", info, "red", trips.Window.Start, trips.Window.End, 5, 1)
+		info := fmt.Sprintf("%d days", trips.DaysAway)
+		thisStripe := newStripe("breach", info, "red", trips.Start, trips.End, 5, 1)
 		err := thisStripe.render(grid, canvas)
 		if err != nil {
 			return fmt.Errorf("stripe render error: %w", err)
 		}
 	} else {
-		info := fmt.Sprintf("%d days", trips.Window.DaysAway)
-		thisStripe := newStripe("longest window", info, "blue", trips.Window.OverlapStart, trips.Window.OverlapEnd, 5, 1)
+		info := fmt.Sprintf("%d days", trips.DaysAway)
+		thisStripe := newStripe("longest window", info, "blue", trips.OverlapStart, trips.OverlapEnd, 5, 1)
 		err := thisStripe.render(grid, canvas)
 		if err != nil {
 			return fmt.Errorf("stripe render error: %w", err)
