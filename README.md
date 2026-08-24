@@ -5,12 +5,11 @@ version v0.7.9 : 24 August 2026 (update for go 1.26)
 A small web app to calculate if the compound length of trips to Schengen
 countries by non-EU visitors conform with Regulation (EU) No 610/2013
 limiting the total length of stays to no more than 90 days in any 180
-day window. (Note that visits to the two [non-Shengen EU
+day window. Trips are conveniently recorded in the url for bookmarking.
+
+(Note that visits to the two [non-Shengen EU
 countries](https://en.wikipedia.org/wiki/Schengen_Area), Ireland and
 Cyprus, should _not_ be counted towards the 90 day limit.)
-
-See the [example gif](#example). Trips are conveniently recorded in the
-url for bookmarking.
 
 You can find out more about the 90 in 180 day rule on the [GOV.UK
 Travelling to the EU and Schengen area web
