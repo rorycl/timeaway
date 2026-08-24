@@ -30,11 +30,13 @@ func TestHome(t *testing.T) {
 	Home(w, r)
 
 	res := w.Result()
-	defer res.Body.Close()
 	_, err := io.ReadAll(res.Body)
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer func() {
+		_ = res.Body.Close()
+	}()
 
 	if want, got := 200, res.StatusCode; want != got {
 		t.Errorf("expected status %d, got %d", want, got)
@@ -50,11 +52,13 @@ func TestHealth(t *testing.T) {
 	Health(w, r)
 
 	res := w.Result()
-	defer res.Body.Close()
 	data, err := io.ReadAll(res.Body)
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer func() {
+		_ = res.Body.Close()
+	}()
 
 	if want, got := 200, res.StatusCode; want != got {
 		t.Errorf("expected status %d, got %d", want, got)
@@ -155,11 +159,13 @@ func TestTripsEndpoint(t *testing.T) {
 			Trips(w, r)
 
 			res := w.Result()
-			defer res.Body.Close()
 			_, err := io.ReadAll(res.Body)
 			if err != nil {
 				t.Fatal(err)
 			}
+			defer func() {
+				_ = res.Body.Close()
+			}()
 
 			if tc.statusCode != res.StatusCode {
 				t.Errorf("expected status %d, got %d", tc.statusCode, res.StatusCode)

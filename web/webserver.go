@@ -235,11 +235,13 @@ func Trips(w http.ResponseWriter, r *http.Request) {
 
 	// read body
 	body, err := io.ReadAll(r.Body)
-	defer r.Body.Close()
 	if err != nil {
 		errSender("body reading error", err)
 		return
 	}
+	defer func() {
+		_ = r.Body.Close()
+	}()
 	if inDevelopment {
 		log.Println("body content:", string(body))
 	}
@@ -355,7 +357,7 @@ func PartialAddTrip(w http.ResponseWriter, r *http.Request) {
 	err = t.Execute(w, data)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprintf(w, "template writing problem : %s", err.Error())
+		_, _ = fmt.Fprintf(w, "template writing problem : %s", err.Error())
 	}
 }
 
@@ -370,12 +372,14 @@ func PartialReport(w http.ResponseWriter, r *http.Request) {
 
 	// read body
 	body, err := io.ReadAll(r.Body)
-	defer r.Body.Close()
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		log.Print("body reading error", err)
 		return
 	}
+	defer func() {
+		_ = r.Body.Close()
+	}()
 	if inDevelopment {
 		log.Println("body content:", string(body))
 	}
@@ -433,6 +437,6 @@ func PartialReport(w http.ResponseWriter, r *http.Request) {
 	err = t.Execute(w, output)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprintf(w, "template writing problem : %s", err.Error())
+		_, _ = fmt.Fprintf(w, "template writing problem : %s", err.Error())
 	}
 }
