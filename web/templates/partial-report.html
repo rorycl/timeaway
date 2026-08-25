@@ -7,19 +7,19 @@
 
 {{ else }}
 {{ if .Trips.Breach }}
-<p>The planned trips <span class="breached">breached</span> the 90 days in 180 day rule with <b>{{ .Trips.DaysAway }}</b> days away.</p>
+<p>The planned trips <span class="breached">breached</span> the 90 days in 180 day rule with a maximum of <b>{{ .Trips.DaysAway }}</b> days away.</p>
 {{ else }}
-<p>The planned trips do <b>not</b> breach the 90 days in 180 day rule with only <b>{{ .Trips.DaysAway }}</b> days away.</p>
+<p>The planned trips do <b>not</b> breach the 90 days in 180 day rule with a maximum of <b>{{ .Trips.DaysAway }}</b> days away.</p>
 {{ end }}{{/* end of breach test */}}
 {{ if .Trips.DaysAway  }}
-<p>The maximum days away in the {{ .Trips.WindowSize }} window is {{ .Trips.Window.Start.Format "Monday 02/01/2006" }} to {{ .Trips.Window.End.Format "Monday 02/01/2006" }}.</p>
+<p>The 180-day window containing most days away runs from {{ .Trips.Window.Start.Format "Monday 02/01/2006" }} to {{ .Trips.Window.End.Format "Monday 02/01/2006" }}.</p>
 
 <!-- svg -->
 {{ if .Plot }}
 <div id="plot">
 {{ .Plot }}
-{{ end }}
 </div>
+{{ end }}
 <!-- end svg -->
 
 <p>The trips in this calculation are:</p>
