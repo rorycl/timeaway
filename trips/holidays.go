@@ -151,7 +151,7 @@ func (h Holiday) String() string {
 // dates of a holiday
 func (h Holiday) days() int {
 	days := 0
-	for d := h.Start; !d.After(h.End); d = d.Add(durationDays(1)) {
+	for d := h.Start; !d.After(h.End); d = d.AddDate(0, 0, 1) {
 		days++
 	}
 	return days

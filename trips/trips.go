@@ -3,6 +3,7 @@ package trips
 import (
 	"errors"
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 )
@@ -234,6 +235,11 @@ func Calculate(hols []Holiday) (*Trips, error) {
 			return trips, trips.Error
 		}
 	}
+
+	// ensure holidays are processed on chronological order
+	sort.SliceStable(trips.OriginalHolidays, func(i, j int) bool {
+		return trips.OriginalHolidays[i].Start.Before(trips.OriginalHolidays[j].Start)
+	})
 
 	// perform the calculation
 	return trips.calculate()
