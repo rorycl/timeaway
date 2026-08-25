@@ -467,26 +467,19 @@ func TripsAsSVG(trips *trips.Trips, w io.Writer) error {
 		}
 	}
 
-	// stripe in either the breach or no-breach longest window line
-	// segments showing the first holiday start date
-	// (trips.Window.OverlapStart) and last holiday end date
+	// Stripe in either the breach or no-breach longest window line segments showing the
+	// first holiday start date (trips.Window.OverlapStart) and last holiday end date
 	// (trips.Window.OverlapEnd) overlapping with the assessment window.
-	// Note that trips.Window.OverlapStart and trips.Window.OverlapEnd
-	// will the same as trips.Window.Start and trips.Window.End if there
-	// is a breach.
-	//
-	// Note that results from the longest window are copied to trips, so the trips data
-	// shown here is from the `trips` itself rather than `trips.Window`.
 	if trips.Breach {
 		info := fmt.Sprintf("%d days", trips.DaysAway)
-		thisStripe := newStripe("breach", info, "red", trips.Start, trips.End, 5, 1)
+		thisStripe := newStripe("breach", info, "red", trips.Window.Start, trips.Window.End, 5, 1)
 		err := thisStripe.render(grid, canvas)
 		if err != nil {
 			return fmt.Errorf("stripe render error: %w", err)
 		}
 	} else {
 		info := fmt.Sprintf("%d days", trips.DaysAway)
-		thisStripe := newStripe("longest window", info, "blue", trips.OverlapStart, trips.OverlapEnd, 5, 1)
+		thisStripe := newStripe("longest window", info, "blue", trips.Window.Start, trips.Window.End, 5, 1)
 		err := thisStripe.render(grid, canvas)
 		if err != nil {
 			return fmt.Errorf("stripe render error: %w", err)
